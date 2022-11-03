@@ -1,2 +1,5 @@
-# uq-gnn
-Final course project for 02456 - Deep Learning (Fall 2022) @ Technical University of Denmark
+# Uncertainty Quantification for Graph Neural Networks
+
+02456 - Deep Learning (Fall 2022) @ Technical University of Denmark
+
+
