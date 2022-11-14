@@ -1,5 +1,9 @@
-numpy
-matplotlib
-networkx
-dgl
+numpy~=1.23.3
+matplotlib~=3.5.2
+networkx~=2.8.4
+dgl~=0.9.1
 
+
+tqdm~=4.64.1
+torch~=1.13.0
+pandas~=1.5.1

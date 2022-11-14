@@ -3,7 +3,6 @@ import numpy as np
 import networkx as nx
 from numba import jit
 from dgl.data import MiniGCDataset, QM9Dataset
-
 from tqdm import tqdm
 
 class GraphDataset():
@@ -131,8 +130,87 @@ class GraphDataset():
                 coords-mean) @ R + mean
         return self
     
-
+    
 class SyntheticData(GraphDataset):
+    """Synthetic Data á la Felix!
+    
+
+    Loads a data set that was created in XXXXX.py
+    """
+    def __init__(self, data, graph_idx, graph_coords, test_size=0.1, device='cpu', seed = 42):
+        #super().__init__(dim=)
+
+        # Store input arguments in class
+        self.device = device
+        self.num_graphs = int(graph_idx.max())
+        self.graph_coords = graph_coords
+        torch.manual_seed(seed)
+
+
+        # Split train and test data
+        idxs = np.arange(self.num_graphs)
+        train_idxs = np.random.choice(idxs, int(self.num_graphs * (1 - test_size)), replace=False)
+        test_idxs = np.setdiff1d(idxs, train_idxs)
+        train_graphs = self.get_info(data, train_idxs, graph_idx, graph_coords)
+        test_graphs = self.get_info(data, train_idxs, graph_idx, graph_coords)
+
+        # Store information
+        self.data = dict({'train': GraphDataset(), 'test': GraphDataset()})
+        for dtype, graphs_ in {'train': train_graphs, 'test': test_graphs}.items():
+            self.data[dtype].node_coordinates = graphs_[0].to(self.device)
+            self.data[dtype].node_graph_index = graphs_[1].to(self.device)
+            self.data[dtype].edge_list = graphs_[2].to(self.device)
+            self.data[dtype].target = graphs_[3].unsqueeze(1).to(self.device)
+            self.data[dtype].num_graphs = graphs_[3].__len__()
+        x=1
+    def get_info(self,data, idxs, graph_idx, graph_coords):
+        new_coords = torch.tensor([])
+        new_graph_idx = torch.tensor([])
+        new_edge_list = torch.tensor([])
+        target = torch.tensor([])
+        for count, i in enumerate(idxs):
+            if count==0:
+                nc = graph_coords[torch.unique(data[torch.where(data[:,-1]==graph_idx[i])[0],0]).to(torch.long)]
+                new_coords = nc
+                new_graph_idx = graph_idx[i]*torch.ones(nc.__len__())
+                new_edge_list = data[torch.where(data[:, -1] == graph_idx[i])[0]][:, :2]
+                target = data[i, 3]
+            else:
+                nc = graph_coords[torch.unique(data[torch.where(data[:,-1]==graph_idx[i])[0],0]).to(torch.long)]
+                new_coords = torch.vstack((new_coords, nc))
+                new_graph_idx = torch.hstack((new_graph_idx, graph_idx[i]*torch.ones(nc.__len__())))
+                new_edge_list = torch.vstack((new_edge_list, data[torch.where(data[:,-1]==graph_idx[i])[0]][:,:2]))
+                target = torch.hstack((target, data[i,3]))
+        return new_coords.to(torch.float), new_graph_idx.to(torch.long), new_edge_list.to(torch.long), target.to(torch.float)
+    #@jit(forceobj=True)
+    def get_information(self, data, idxs):
+        res = np.empty(len(idxs), dtype=np.float64)
+
+        node_coordinates = torch.tensor([])
+        node_graph_index = torch.tensor([])
+        edge_list = torch.tensor([])
+
+        pgl = 0
+        for i, idx in enumerate(idxs):
+            g, label = data[idx]
+
+            res[i] = label.item()
+            coords_ = g.ndata['R']
+            node_coordinates = torch.concat([node_coordinates, coords_])
+            node_graph_index = torch.concat([node_graph_index, i * torch.ones([coords_.__len__()])])
+
+            node_from, node_to = g.edges(form='uv')
+            edge_list = torch.concat([edge_list, pgl + torch.stack(g.edges()).T])
+
+            # Previous graph length
+            pgl += coords_.__len__()
+
+        # Target attributes
+        #graph_list = torch.tensor(res > res.mean())
+        return node_coordinates, node_graph_index.to(torch.long), edge_list.to(torch.long), torch.tensor(res).to(torch.float)
+
+
+class MiniGCData(GraphDataset):
     """MiniGCDataset dataset.
 
     Creates a variety of synthetic graphs.
