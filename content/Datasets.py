@@ -3,6 +3,9 @@ import numpy as np
 import networkx as nx
 from numba import jit
 from dgl.data import MiniGCDataset, QM9Dataset
+import scipy.io
+
+
 from tqdm import tqdm
 
 class GraphDataset():
@@ -338,3 +341,102 @@ class QM9:
         # Target attributes
         #graph_list = torch.tensor(res > res.mean())
         return node_coordinates, node_graph_index.to(torch.long), edge_list.to(torch.long), torch.tensor(res).to(torch.float)
+
+    
+    
+
+class QM7(GraphDataset):
+    '''
+    QM7 dataset.
+    
+    Composed of 23 molecules and totalling 7165 molecules.
+    '''
+    
+    def __init__(self, path = 'data/qm7.mat'):
+        super().__init__()
+        
+        # define path if necessary
+        qm7 = scipy.io.loadmat('data/qm7.mat')
+        
+        # it needs the following attributes
+
+        # GRAPH/MOLECULE RELATED:
+
+        # Number of graphs in the dataset, i.e. molecules
+        self.num_graphs = len(qm7['T'][0]) # T is atomization energies (target)
+
+        # Graph list, each molecule has a
+        self.graph_list = torch.tensor(range(self.num_graphs))
+
+        # the energy of each molecule
+        self.molecule_energy = torch.tensor(qm7['T'][0])
+
+        # NODE/ATOM RELATED:
+
+        # i.e. atoms, each atom will be distinct
+        # total charges higher than 0 (there are no negative and 0 charged atoms, see above)
+        self.num_nodes = int((qm7['Z']>0).sum())
+
+        self.node_list = torch.tensor(range(self.num_nodes))
+
+        # Node graph index, molecule number each atom belongs to
+        node_graph_index = []
+
+        # Node coordinates
+        node_coordinates = []
+
+        # Node atomic charge
+        node_charge = [0]*self.num_nodes # currently empty
+
+
+        # EDGE RELATED:
+
+        # Edge list - fully conected graphs due to 
+        edge_list = []
+
+        # the coulomb value for each edge
+        edge_coulomb = []
+
+
+        # keeping note of atom indices globally (i.e. for all graphs and w.r.t. num_nodes)
+        global_idx = 0
+        # looping each molecule
+        for molecule in self.graph_list:
+
+            # each nodes index in current graph (globally)
+            nodes_idx_graph = [local_idx + global_idx for local_idx in list(range((qm7['Z'][molecule]>0).sum()))]
+
+            # looping each atom/node in current molecule
+            for node_idx in range((qm7['Z'][molecule]>0).sum()) :
+                node_graph_index.append(molecule) # saving which molecule this atom belongs to
+                node_coordinates.append(qm7['R'][molecule][node_idx]) # saving nodes/atoms coordinate
+                node_charge[global_idx] = qm7['Z'][molecule][node_idx] # saving each nodes/atoms energy
+
+                # looping all neighbouring nodes/atoms in graph/molecule (based on global node index)
+                # creating edge list, note: fully connected
+                for idx, neighbouring_node in enumerate(nodes_idx_graph):
+                    # if not current atom_idx (don't want edges going to themselvel)
+                    if neighbouring_node != global_idx:
+                        # creating the edge list
+                        edge_list.append([global_idx, neighbouring_node])
+                        # coulomb value per edge, note: symmetric
+                        edge_coulomb.append(qm7['X'][molecule][node_idx, idx])
+
+                global_idx += 1
+
+        assert num_nodes == global_idx, 'inconsistencies noticed'
+
+
+        self.node_graph_index = torch.tensor(node_coordinates)
+
+        self.node_coordinates = torch.tensor(node_coordinates)
+
+        self.node_charge = torch.tensor(node_charge)
+
+        self.edge_list = torch.tensor(edge_list)
+
+        self.edge_coulomb = torch.tensor(edge_coulomb)
+
+
+
+    
