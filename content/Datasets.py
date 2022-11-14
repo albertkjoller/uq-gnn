@@ -4,6 +4,8 @@ import networkx as nx
 from numba import jit
 from dgl.data import MiniGCDataset, QM9Dataset
 
+from tqdm import tqdm
+
 class GraphDataset():
     """Parent class for graph datasets.
 
@@ -199,49 +201,55 @@ class SyntheticData(GraphDataset):
             pgl += G.__len__() 
 
 
-class Molecular(GraphDataset):
+class QM9:
     """Molecular dataset.
 
     
     """
 
-    def __init__(self, num_graphs, label_attr: str):
-        super().__init__(dim=3)
+    def __init__(self, label_attr: str, num_graphs=None, test_size=0.1, device='cpu'):
+        #super().__init__(dim=)
 
-        # Number of graphs in the dataset
+        # Store input arguments in class
         self.num_graphs = num_graphs
+        self.device = device
         
         # Load graph data
         data = QM9Dataset(label_keys=[label_attr])
-        self.numClasses = 2
-        self.classes = {0: 'low', 1: 'high'}
-        
-        # Get graph information
-        graphs_ = self.get_information(data, num_graphs)
-        
-        # Update information
-        self.node_coordinates = graphs_[0]
-        self.node_graph_index = graphs_[1]
-        self.graph_list = graphs_[2]
-        self.edge_list = graphs_[3]
+        num_graphs = num_graphs if num_graphs != None else data.__len__()
+
+        # Split train and test data
+        idxs = np.arange(num_graphs)
+        train_idxs = np.random.choice(idxs, int(num_graphs * (1 - test_size)), replace=False)
+        test_idxs = np.setdiff1d(idxs, train_idxs)
+        train_graphs = self.get_information(data, train_idxs)
+        test_graphs = self.get_information(data, test_idxs)
+
+        # Store information
+        self.data = dict({'train': GraphDataset(), 'test': GraphDataset()})
+        for dtype, graphs_ in {'train': train_graphs, 'test': test_graphs}.items():
+            self.data[dtype].node_coordinates = graphs_[0].to(self.device)
+            self.data[dtype].node_graph_index = graphs_[1].to(self.device)
+            self.data[dtype].edge_list = graphs_[2].to(self.device)
+            self.data[dtype].target = graphs_[3].unsqueeze(1).to(self.device)
+            self.data[dtype].num_graphs = graphs_[3].__len__()
     
     @jit(forceobj=True)
-    def get_information(self, data, num_):
-        res = np.empty(num_, dtype=np.float64)
+    def get_information(self, data, idxs):
+        res = np.empty(len(idxs), dtype=np.float64)
 
         node_coordinates = torch.tensor([])
         node_graph_index = torch.tensor([])
         edge_list = torch.tensor([])
-        
+
         pgl = 0
-        for i in range(num_):
-            g, label = data[i]
+        for i, idx in enumerate(idxs):
+            g, label = data[idx]
 
             res[i] = label.item()
             coords_ = g.ndata['R']
             node_coordinates = torch.concat([node_coordinates, coords_])
             node_graph_index = torch.concat([node_graph_index, i * torch.ones([coords_.__len__()])])
-            
 
             node_from, node_to = g.edges(form='uv')
             edge_list = torch.concat([edge_list, pgl + torch.stack(g.edges()).T])
@@ -250,6 +258,5 @@ class Molecular(GraphDataset):
             pgl += coords_.__len__() 
         
         # Target attributes
-        graph_list = torch.tensor(res > res.mean())
-        self.regression_target = res
-        return node_coordinates, node_graph_index.to(torch.long), graph_list.to(torch.long), edge_list.to(torch.long)
+        #graph_list = torch.tensor(res > res.mean())
+        return node_coordinates, node_graph_index.to(torch.long), edge_list.to(torch.long), torch.tensor(res).to(torch.float)

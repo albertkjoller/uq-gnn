@@ -3,3 +3,8 @@ __pycache__/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+# tensorboard logs
+logs/
+
+.idea

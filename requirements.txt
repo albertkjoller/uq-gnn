@@ -1,6 +1,5 @@
 numpy
 matplotlib
 networkx
-torch
 dgl
 

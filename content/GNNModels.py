@@ -1,5 +1,7 @@
 """Simple invariant and equivariant graph neural networks."""
 import torch
+from Distributions import NormalInverseGamma
+
 
 
 class GNNInvariant(torch.nn.Module):
@@ -13,8 +15,7 @@ class GNNInvariant(torch.nn.Module):
             (default 3)
     """
 
-    def __init__(self, output_dim=2, state_dim=10,
-                 num_message_passing_rounds=3):
+    def __init__(self, output_dim=2, state_dim=10, num_message_passing_rounds=3, device='cpu'):
         super().__init__()
 
         # Define dimensions and other hyperparameters
@@ -31,6 +32,10 @@ class GNNInvariant(torch.nn.Module):
         # State output network
         self.output_net = torch.nn.Linear(
             self.state_dim, self.output_dim)
+
+        # Utilize GPU?
+        self.device = device
+        self.to(device)
 
     def forward(self, x):
         """Evaluate neural network on a batch of graphs.
@@ -57,7 +62,7 @@ class GNNInvariant(torch.nn.Module):
 
         """
         # Initialize node features to zeros
-        self.state = torch.zeros([x.num_nodes, self.state_dim])
+        self.state = torch.zeros([x.num_nodes, self.state_dim]).to(self.device)
 
         # Loop over message passing rounds
         for _ in range(self.num_message_passing_rounds):
@@ -71,16 +76,14 @@ class GNNInvariant(torch.nn.Module):
             self.state.index_add_(0, x.node_to, message)
 
         # Aggretate: Sum node features
-        self.graph_state = torch.zeros((x.num_graphs, self.state_dim))
+        self.graph_state = torch.zeros((x.num_graphs, self.state_dim)).to(self.device)
         self.graph_state.index_add_(0, x.node_graph_index, self.state)
 
         # Output
         out = self.output_net(self.graph_state)
+        # NormalInverseGamma(1, 1, 1, 1)
         return out
 
-    
-# TODO: create a general class for GNNEquivariant that can work on both 2D and 3D datasets! 
-# TODO: suggestion: do this by implementing a 3D-crossproduct and change the cross-product-part of the message network to handle this...
 
 class GNNEquivariant2D(torch.nn.Module):
     """Translation and rotation invariant graph neural network.
@@ -93,7 +96,7 @@ class GNNEquivariant2D(torch.nn.Module):
             (default 3)
     """
 
-    def __init__(self, output_dim=2, state_dim=10,
+    def __init__(self, output_dim=4, state_dim=10,
                  num_message_passing_rounds=3):
         super().__init__()
 
