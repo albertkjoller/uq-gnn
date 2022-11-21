@@ -410,5 +410,81 @@ class QM7(GraphDataset):
         self.edge_coulomb = torch.tensor(edge_coulomb)
 
 
+import matplotlib.pyplot as plt
+import pandas as pd
 
-    
+class ToyDataset1D:
+
+    def __init__(self, B: int, N: int, device: torch.device, visualize_on_load=True, seed=42):
+        # Set seed and device
+        self.seed = seed
+        torch.manual_seed(seed)
+        self.device = device
+
+        # Create batches
+        self.N = N # NUMBER OF POINTS
+        self.B = B # BATCH SIZE
+        self.create_dataset()
+        if visualize_on_load == True:
+            self.visualize_dataset(figsize=(8, 6))
+
+        # Restructure #TODO: follow same structure as for molecular dataloader
+        self.data = list(zip(self.data['data'], self.data['target']))
+
+    def create_dataset(self):
+        self.data = {}
+        order_ = torch.randperm(self.N)  # shuffle data
+        self.data['data'] = torch.arange(-4, 4, 8 / self.N)[order_].reshape(-1, self.B, 1).to(self.device)
+        self.data['target'] = self.data['data'] ** 3 + (torch.randn(self.N, 1).reshape(-1, self.B, 1) * 3).to(self.device)
+
+    def visualize_dataset(self, figsize=(12, 8)):
+        # plot data
+        plt.figure(figsize=figsize)
+        plt.plot(self.data['data'].detach().flatten().cpu(), self.data['target'].detach().flatten().cpu(), 'k.')
+        plt.plot(torch.arange(-4, 4, 8 / self.N), torch.arange(-4, 4, 8 / self.N) ** 3, 'r--')
+        plt.xlim([-6.5, 6.5])
+        plt.show()
+
+    def plot_regression_line(self, model: torch.nn.Module, plot_uncertainty=True, save_path=None, show=True):
+        # Predict on the data range
+        toy_ = torch.arange(-6, 6, 12 / self.N).reshape(-1, 1).to(self.device)
+        outputs = model(toy_)
+
+        # Get evidential parameters
+        gamma, v, alpha, beta = torch.tensor_split(outputs, 4, axis=1)
+
+        # Reformat tensors
+        xaxis = toy_.detach().flatten().cpu().numpy()
+        y_true = (toy_ ** 3).detach().flatten().cpu().numpy()
+        y_pred = gamma.detach().flatten().cpu().numpy()
+        aleatoric = (beta / (alpha - 1)).detach().flatten().cpu().numpy()
+        epistemic = (beta / (v * (alpha - 1))).detach().flatten().cpu().numpy()
+
+        # Gather information in dataframe for plotting
+        results = pd.DataFrame({'xaxis': xaxis,
+                                'y_true': y_true,
+                                'y_pred': y_pred,
+                                'aleatoric': aleatoric,
+                                'epistemic': epistemic})
+
+        # Plot regression line
+
+        plt.plot(results['xaxis'], results['y_true'], '--r')
+        plt.plot(results['xaxis'], results['y_pred'])
+
+        plt.vlines(-4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
+        plt.vlines(4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
+        plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6, -4, alpha=.3, interpolate=True, color='gray')
+        plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6, alpha=.3, interpolate=True, color='gray')
+
+        if plot_uncertainty == True:
+            plt.fill_between(results['xaxis'], results['y_pred'] - results['epistemic'],
+                             results['y_pred'] + results['epistemic'], alpha=.3, interpolate=True)  # step='post')
+
+        plt.xlim([-6.5, 6.5])
+        plt.ylim([-6.5 ** 3, 6.5 ** 3])
+
+        if save_path != None:
+            plt.savefig(save_path)
+        if show == True:
+            plt.show()

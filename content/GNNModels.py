@@ -1,5 +1,6 @@
 """Simple invariant and equivariant graph neural networks."""
 import torch
+from utils import cross2D, dot2D, dot3D
 
 class GNNInvariant(torch.nn.Module):
     """Translation and rotation invariant graph neural network.
@@ -94,7 +95,8 @@ class GNNInvariant(torch.nn.Module):
         return out
 
 
-class GNNEvidentialInvariant(torch.nn.Module):
+
+class EvidentialGNN3D(torch.nn.Module):
     """Translation and rotation invariant graph neural network.
 
     Keyword Arguments
@@ -187,9 +189,9 @@ class GNNEvidentialInvariant(torch.nn.Module):
         return out
 
 
-class EvidentialToyModel(torch.nn.Module):
+class EvidentialToyModel1D(torch.nn.Module):
     """
-    Toy model for verifying that evidential learning works.
+    Toy model for verifying that evidential learning works for approximating a 3rd order polynomial.
     """
 
     def __init__(self, hidden_dim=8, device='cpu'):
@@ -213,74 +215,3 @@ class EvidentialToyModel(torch.nn.Module):
         gamma, v, alpha, beta = torch.tensor_split(evidential_params_, 4, axis=1)
         out = torch.concat([gamma, self.softplus(v), self.softplus(alpha) + 1, self.softplus(beta)], axis=1)
         return out
-
-
-
-
-def cross(v1, v2):
-    """Compute the 2-d cross product.
-
-    Parameters
-    ----------
-    v1, v2 : Array
-        Arrays (shape Nx2) containing N 2-d vectors
-
-    Returns
-    -------
-    Array
-        Array (shape N) containing the cross products
-
-    """
-    return v1[:, 0] * v2[:, 1] - v1[:, 1] * v2[:, 0]
-
-def dot(v1, v2):
-    """Compute the 2-d dot product.
-
-    Parameters
-    ----------
-    v1, v2 : Array
-        Arrays (Nx2) containing N 2-d vectors
-
-    Returns
-    -------
-    Array
-        Array (shape N) containing the dot products
-
-    """
-    return v1[:, 0] * v2[:, 0] + v1[:, 1] * v2[:, 1]
-
-def dot3D(v1, v2):
-    """Compute the 2-d dot product.
-
-    Parameters
-    ----------
-    v1, v2 : Array
-        Arrays (Nx2) containing N 3-d vectors
-
-    Returns
-    -------
-    Array
-        Array (shape N) containing the dot products
-
-    """
-    return v1[:, 0] * v2[:, 0] + v1[:, 1] * v2[:, 1] + v1[:, 2] * v2[:, 2]
-
-# This needs to be implemented correctly...
-def cross3D(v1, v2):
-    """Compute the 2-d cross product.
-
-    Parameters
-    ----------
-    v1, v2 : Array
-        Arrays (shape Nx2) containing N 3-d vectors
-
-    Returns
-    -------
-    Array
-        Array (shape N) containing the cross products
-
-    """    
-    s1 = v1[:, 1] * v2[:, 2] - v1[:, 2] * v2[:, 1]
-    s2 = v1[:, 2] * v2[:, 0] - v1[:, 0] * v2[:, 2]
-    s3 = v1[:, 0] * v2[:, 1] - v1[:, 1] * v2[:, 0]
-    return torch.stack([s1, s2, s3])
