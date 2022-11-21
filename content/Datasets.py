@@ -4,9 +4,11 @@ import networkx as nx
 from numba import jit
 from dgl.data import MiniGCDataset, QM9Dataset
 import scipy.io
+from sklearn.model_selection import train_test_split
+from torch.utils.data import Dataset, DataLoader, random_split, BatchSampler, SequentialSampler
+from itertools import combinations
 
 
-from tqdm import tqdm
 
 class GraphDataset():
     """Parent class for graph datasets.
@@ -132,8 +134,9 @@ class GraphDataset():
             self.node_coordinates[self.node_graph_index == i] = (
                 coords-mean) @ R + mean
         return self
-    
-    
+
+
+
 class SyntheticData(GraphDataset):
     """Synthetic Data á la Felix!
     
@@ -314,100 +317,260 @@ class QM9:
         #graph_list = torch.tensor(res > res.mean())
         return node_coordinates, node_graph_index.to(torch.long), edge_list.to(torch.long), torch.tensor(res).to(torch.float)
 
-    
-    
 
-class QM7(GraphDataset):
-    '''
-    QM7 dataset.
-    
-    Composed of 23 molecules and totalling 7165 molecules.
-    '''
-    
-    def __init__(self, path = 'data/qm7.mat'):
-        super().__init__()
-        
-        # define path if necessary
-        qm7 = scipy.io.loadmat('data/qm7.mat')
-        
-        # it needs the following attributes
+def synthetic_dataset(path = 'data/', device='cpu'):
+    """Synthetic Data á la Felix!
+    Loads a data set that was created in XXXXX.py
+    """
 
-        # GRAPH/MOLECULE RELATED:
+    extras = False
 
-        # Number of graphs in the dataset, i.e. molecules
-        self.num_graphs = len(qm7['T'][0]) # T is atomization energies (target)
+    edges = pd.read_csv(f'{path}/edgelist_synthetic.csv')
+    data = torch.tensor(np.array(edges))
 
-        # Graph list, each molecule has a
-        self.graph_list = torch.tensor(range(self.num_graphs))
+    coords = pd.read_csv(f'{path}/coordinates_synthetic.csv')
+    graph_coords = torch.tensor(np.array(coords))
 
-        # the energy of each molecule
-        self.molecule_energy = torch.tensor(qm7['T'][0])
+    # edge to graph index is last column ind ata
+    edge_to_graph = data[:, -1]
+
+    num_graphs = int(edge_to_graph.max()) + 1
+
+    graph_list = range(num_graphs)
+    # todo is target edge_length?
+    graph_info = {'graph_list': graph_list, 'target': 'edge_length', 'extras': extras}
+
+    graph_data = {}
+    for graph_idx in graph_list:
+        graph_data[graph_idx] = {}
+        graph_data[graph_idx]['graph_idx'] = graph_idx # for reference
 
         # NODE/ATOM RELATED:
-
-        # i.e. atoms, each atom will be distinct
-        # total charges higher than 0 (there are no negative and 0 charged atoms, see above)
-        self.num_nodes = int((qm7['Z']>0).sum())
-
-        self.node_list = torch.tensor(range(self.num_nodes))
-
+        #   - use node_list to filter some data further on
+        graph_data[graph_idx]['node_list'] =
+        graph_data[graph_idx]['num_nodes'] =
         # Node graph index, molecule number each atom belongs to
-        node_graph_index = []
-
         # Node coordinates
-        node_coordinates = []
-
-        # Node atomic charge
-        node_charge = [0]*self.num_nodes # currently empty
-
-
+        graph_data[graph_idx]['node_coordinates'] =
         # EDGE RELATED:
+        # Edge list - fully connected graphs thus perform possible combinations
+        graph_data[graph_idx]['edge_list'] =
 
-        # Edge list - fully conected graphs due to 
-        edge_list = []
 
+
+
+    # Split train and test data
+    idxs = np.arange(num_graphs)
+
+
+    train_idxs = np.random.choice(idxs, int(num_graphs * (1 - test_size)), replace=False)
+    test_idxs = np.setdiff1d(idxs, train_idxs)
+    train_graphs = get_info(data, train_idxs, graph_idx, graph_coords)
+    test_graphs = get_info(data, train_idxs, graph_idx, graph_coords)
+
+    # Store information
+    data = dict({'train': GraphDataset(), 'test': GraphDataset()})
+    for dtype, graphs_ in {'train': train_graphs, 'test': test_graphs}.items():
+        data[dtype].node_coordinates = graphs_[0].to(self.device)
+        data[dtype].node_graph_index = graphs_[1].to(self.device)
+        data[dtype].edge_list = graphs_[2].to(self.device)
+        data[dtype].target = graphs_[3].unsqueeze(1).to(self.device)
+        data[dtype].num_graphs = graphs_[3].__len__()
+    x = 1
+
+    return graph_info, graph_data
+
+
+def get_info(self, data, idxs, graph_idx, graph_coords):
+    new_coords = torch.tensor([])
+    new_graph_idx = torch.tensor([])
+    new_edge_list = torch.tensor([])
+    target = torch.tensor([])
+    for count, i in enumerate(idxs):
+        if count == 0:
+            nc = graph_coords[torch.unique(data[torch.where(data[:, -1] == graph_idx[i])[0], 0]).to(torch.long)]
+            new_coords = nc
+            new_graph_idx = graph_idx[i] * torch.ones(nc.__len__())
+            new_edge_list = data[torch.where(data[:, -1] == graph_idx[i])[0]][:, :2]
+            target = data[i, 3]
+        else:
+            nc = graph_coords[torch.unique(data[torch.where(data[:, -1] == graph_idx[i])[0], 0]).to(torch.long)]
+            new_coords = torch.vstack((new_coords, nc))
+            new_graph_idx = torch.hstack((new_graph_idx, graph_idx[i] * torch.ones(nc.__len__())))
+            new_edge_list = torch.vstack((new_edge_list, data[torch.where(data[:, -1] == graph_idx[i])[0]][:, :2]))
+            target = torch.hstack((target, data[i, 3]))
+    return new_coords.to(torch.float), new_graph_idx.to(torch.long), new_edge_list.to(torch.long), target.to(
+        torch.float)
+
+
+def QM7_dataset(path='data/qm7.mat', device='cpu'):
+
+    # TODO: implement this?
+    device = device
+
+    # NOTE: define extras for this dataset apart from the common
+    extras = ['molecule_energy', 'node_charge', 'edge_coulomb']
+
+    # define path if necessary
+    qm7 = scipy.io.loadmat(path)
+    # GRAPH/MOLECULE RELATED:
+    # Number of graphs in the dataset, i.e. molecules
+    num_graphs = len(qm7['T'][0]) # T is atomization energies (target)
+    # Graph list, each molecule has a distinct index
+    graph_list = range(num_graphs)
+    graph_info = {'graph_list': graph_list, 'target': 'molecule_energy', 'extras': extras}
+
+    num_nodes = int((qm7['Z'] > 0).sum()) # used to assert later
+    # looping each molecule
+    graph_data = {}
+
+    for graph_idx in graph_list:
+        graph_data[graph_idx] = {}
+        graph_data[graph_idx]['graph_idx'] = graph_idx # for reference
+
+        graph_data[graph_idx]['molecule_energy'] = torch.tensor(qm7['T'][0][graph_idx])
+        # from 0 and up
+        # NODE/ATOM RELATED:
+        #   - use node_list to filter some data further on
+        graph_data[graph_idx]['node_list'] = torch.tensor(np.array(range(int((qm7['Z'][graph_idx] > 0).sum()))))
+        graph_data[graph_idx]['num_nodes'] = len(graph_data[graph_idx]['node_list'])
+        # Node graph index, molecule number each atom belongs to
+        # Node coordinates
+        graph_data[graph_idx]['node_coordinates'] = torch.tensor(qm7['R'][graph_idx])[graph_data[graph_idx]['node_list']]
+        # Node atomic charge
+        # total charges higher than 0 (there are no negative and 0 charged atoms, see above)
+        graph_data[graph_idx]['node_charge'] = torch.tensor(qm7['Z'][graph_idx][graph_data[graph_idx]['node_list']])
+        # EDGE RELATED:
+        # Edge list - fully connected graphs thus perform possible combinations
+        graph_data[graph_idx]['edge_list'] = torch.tensor(list(combinations(graph_data[graph_idx]['node_list'],2))).to(torch.long)
         # the coulomb value for each edge
-        edge_coulomb = []
+        graph_data[graph_idx]['edge_coulomb'] = torch.zeros(len(graph_data[graph_idx]['edge_list']))
+        for edge_idx, edge in enumerate(graph_data[graph_idx]['edge_list']):
+            graph_data[graph_idx]['edge_coulomb'][edge_idx] = torch.tensor(qm7['X'][graph_idx][edge[0], edge[1]])
+            # NOTE: GraphDataset automatically calculates edge_lengths
+    return graph_info, graph_data
 
 
-        # keeping note of atom indices globally (i.e. for all graphs and w.r.t. num_nodes)
-        global_idx = 0
-        # looping each molecule
-        for molecule in self.graph_list:
-
-            # each nodes index in current graph (globally)
-            nodes_idx_graph = [local_idx + global_idx for local_idx in list(range((qm7['Z'][molecule]>0).sum()))]
-
-            # looping each atom/node in current molecule
-            for node_idx in range((qm7['Z'][molecule]>0).sum()) :
-                node_graph_index.append(molecule) # saving which molecule this atom belongs to
-                node_coordinates.append(qm7['R'][molecule][node_idx]) # saving nodes/atoms coordinate
-                node_charge[global_idx] = qm7['Z'][molecule][node_idx] # saving each nodes/atoms energy
-
-                # looping all neighbouring nodes/atoms in graph/molecule (based on global node index)
-                # creating edge list, note: fully connected
-                for idx, neighbouring_node in enumerate(nodes_idx_graph):
-                    # if not current atom_idx (don't want edges going to themselvel)
-                    if neighbouring_node != global_idx:
-                        # creating the edge list
-                        edge_list.append([global_idx, neighbouring_node])
-                        # coulomb value per edge, note: symmetric
-                        edge_coulomb.append(qm7['X'][molecule][node_idx, idx])
-
-                global_idx += 1
-
-        assert num_nodes == global_idx, 'inconsistencies noticed'
 
 
-        self.node_graph_index = torch.tensor(node_coordinates)
 
-        self.node_coordinates = torch.tensor(node_coordinates)
 
-        self.node_charge = torch.tensor(node_charge)
 
-        self.edge_list = torch.tensor(edge_list)
+def get_loaders(graph_info, graph_data, batch_size=64, test_size=0.2, val_size=0.2, random_state=42, shuffle=True):
+    graph_list = graph_info['graph_list']
+    target = graph_info['target']
+    extras = graph_info['extras']
+    # splitting based on graph list
+    #   - dataset is shuffled
+    train_idxs, test_idxs = train_test_split(graph_list, test_size=test_size, random_state=random_state,
+                                             shuffle=shuffle)
+    # again, split to get val data (on train data)
+    train_idxs, val_idxs = train_test_split(train_idxs, test_size=val_size, random_state=random_state,
+                                            shuffle=shuffle)
+    # create a data class with __getitem__, i.e. iterable for dataloaders
+    train_data = iterate_data(graph_data, train_idxs)
+    val_data = iterate_data(graph_data, val_idxs)
+    test_data = iterate_data(graph_data, test_idxs)
 
-        self.edge_coulomb = torch.tensor(edge_coulomb)
+    collate_fn = collate_fn_class(extras=extras, target=target)
+
+    train_loader = DataLoader(train_data, batch_size=batch_size, collate_fn=collate_fn, shuffle=False, drop_last=True)
+    val_loader = DataLoader(val_data, batch_size=batch_size, collate_fn=collate_fn, shuffle=False, drop_last=True)
+    test_loader = DataLoader(test_data, batch_size=batch_size, collate_fn=collate_fn, shuffle=False, drop_last=True)
+
+    return (train_loader, val_loader, test_loader)
+
+
+class collate_fn_class():
+    """
+    Used to collect a list/batch of graphs into a single data object, in this case GraphDataset(),
+    so that it is ready to as input in a GNN.
+    I.e. the goal is to collect the data for all graphs into single dtype instances
+    Class object to use extra variables if necessary/defined
+    """
+    def __init__(self, extras=False, target='edge_length'):
+        self.extras = extras
+        self.target = target
+
+
+    def __call__(self, data):
+        # defining batch as a graph dataset
+        #   - inheritance from:
+        batch = GraphDataset()
+        # defining variables
+        batch.num_graphs = torch.tensor(len(data))
+        # NOTE: graph indices are reset to 0
+        # batch.graph_list = torch.zeros(batch.num_graphs)
+        batch.graph_list = torch.arange(0, batch.num_graphs)
+        # initialize
+        batch.node_list = torch.tensor([])
+        batch.node_graph_index = torch.tensor([])
+        batch.node_coordinates = torch.tensor([])
+        batch.edge_list = torch.tensor([])
+
+        # if dataset has extra variables, initialize
+        if self.extras != False:
+            extra_data = {}
+            for attribute in self.extras:
+                extra_data[attribute] = torch.tensor([])
+
+        # iterating variables in batch
+        # to keep graphs distinct
+        node_ref_idx = 0
+        # todo: is concat efficient?
+        for idx, graph_data in enumerate(data):
+            # idx for current graph
+            num_nodes = len(graph_data['node_list'])
+            batch.node_list = torch.concat([batch.node_list, node_ref_idx + graph_data['node_list']])
+            batch.node_graph_index = torch.concat([batch.node_graph_index, torch.ones(num_nodes) * idx])
+            batch.node_coordinates = torch.concat([batch.node_coordinates, graph_data['node_coordinates']])
+            batch.edge_list = torch.concat([batch.edge_list, node_ref_idx + graph_data['edge_list']])
+            # todo extras
+            if self.extras != False:
+                for attribute in self.extras:
+                    # concatenating data
+                    #   NOTE: object has to be 1D and dtype and if index related properties are not implemented
+                    extra_data[attribute] = torch.concat([extra_data[attribute], torch.unsqueeze(graph_data[attribute], dim=-1)])
+                # increment to avoid duplicated (nodes have to be distinct across graphs)
+            node_ref_idx += num_nodes
+
+        # has to be integers
+        batch.node_list = batch.node_list.to(torch.long)
+        batch.edge_list = batch.edge_list.to(torch.long)
+        batch.node_graph_index = batch.node_graph_index.to(torch.long)
+        # defining target
+        batch.target = extra_data[self.target]
+
+        if self.extras != False:
+            for attribute in self.extras:
+                setattr(batch, attribute, extra_data[attribute])
+
+        return batch
+
+
+
+
+class iterate_data(Dataset):
+    '''
+    Used to get a graph based on its index when looping
+    '''
+    def __init__(self, graph_data, subset_idxs):
+        # converting to tensor
+        self.N = len(subset_idxs)
+        # contains graph indices for current subset
+        self.subset_idxs = subset_idxs
+        # returns graph data given its idx
+        self.graph_data = graph_data
+
+    def __len__(self):
+        return self.N
+
+    def __getitem__(self, idx):
+        # extract graph index
+        graph_idx = self.subset_idxs[idx]
+        # return graph data
+        return self.graph_data[graph_idx]
+
 
 
 import matplotlib.pyplot as plt
@@ -420,7 +583,6 @@ class ToyDataset1D:
         self.seed = seed
         torch.manual_seed(seed)
         self.device = device
-
         # Create batches
         self.N = N # NUMBER OF POINTS
         self.B = B # BATCH SIZE
@@ -488,3 +650,4 @@ class ToyDataset1D:
             plt.savefig(save_path)
         if show == True:
             plt.show()
+
