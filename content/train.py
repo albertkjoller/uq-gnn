@@ -9,13 +9,8 @@ import numpy as np
 from tqdm import trange
 
 import Datasets
-<<<<<<< HEAD
-from GNNModels import GNNEvidentialInvariant, GNNInvariant
-from losses import NIGLoss
-=======
-from GNNModels import EvidentialGNN3D
+from GNNModels import EvidentialGNN3D, GNNInvariant
 from losses import NIGLoss, MSELoss
->>>>>>> adabed80797fd2be94f0500bc10e67722f8fdad7
 
 def train(train_data, test_data, net, optimizer, loss_function, lr=0.01, epochs=1000,
           val_every_step=50, store_train_every=50,
@@ -99,7 +94,7 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(net.parameters(),)
 
     # Training parameters
-    epochs = 1000
+    epochs = 4000
 
     # Tensorboard configurations
     tensorboard_logdir = 'logs_felix/'
@@ -107,6 +102,8 @@ if __name__ == '__main__':
 
 
     # Run training loop
+    #seed 0 is good, 42 is bad!
+    torch.manual_seed(42)
     train(train_data, test_data, net, optimizer, loss_function=loss_function, lr=0.01,
           epochs=epochs, val_every_step=50, store_train_every=50,
           experiment_name=experiment_name, tensorboard_logdir=tensorboard_logdir)

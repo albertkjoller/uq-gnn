@@ -69,9 +69,9 @@ class GNNInvariant(torch.nn.Module):
         # Loop over message passing rounds
         for _ in range(self.num_message_passing_rounds):
             coord_sum = torch.sum(torch.abs(x.node_coordinates[x.node_from]), axis=1)
-            dot_prod_1 = dot(x.node_coordinates[x.node_from], x.node_coordinates[x.node_to]).view(x.edge_lengths.shape)
+            dot_prod_1 = dot3D(x.node_coordinates[x.node_from], x.node_coordinates[x.node_to]).view(x.edge_lengths.shape)
             # DOT: node_coordinates_to/from and edge directions -> 71%
-            dot_prod_2 = dot(x.node_coordinates[x.node_from], x.edge_vectors).view(x.edge_lengths.shape)
+            dot_prod_2 = dot3D(x.node_coordinates[x.node_from], x.edge_vectors).view(x.edge_lengths.shape)
             # Big message network
             inp = torch.cat((self.state[x.node_from], x.edge_lengths, coord_sum.view(x.edge_lengths.shape), dot_prod_1.view(x.edge_lengths.shape),
                                  dot_prod_2.view(x.edge_lengths.shape)), 1)
@@ -119,8 +119,11 @@ class EvidentialGNN3D(torch.nn.Module):
         self.output_dim = 4
 
         # Message passing networks
-        self.message_net = torch.nn.Sequential(
+        '''self.message_net = torch.nn.Sequential(
             torch.nn.Linear(self.state_dim+self.edge_dim, self.state_dim),
+            torch.nn.Tanh())'''
+        self.message_net = torch.nn.Sequential(
+            torch.nn.Linear(self.state_dim + 4, self.state_dim),
             torch.nn.Tanh())
 
         # Define layers
@@ -168,11 +171,20 @@ class EvidentialGNN3D(torch.nn.Module):
 
         # Loop over message passing rounds
         for _ in range(self.num_message_passing_rounds):
-            # Input to message passing networks
+            coord_sum = torch.sum(torch.abs(x.node_coordinates[x.node_from]), axis=1)
+            dot_prod_1 = dot3D(x.node_coordinates[x.node_from], x.node_coordinates[x.node_to]).view(x.edge_lengths.shape)
+            # DOT: node_coordinates_to/from and edge directions -> 71%
+            dot_prod_2 = dot3D(x.node_coordinates[x.node_from], x.edge_vectors).view(x.edge_lengths.shape)
+            # Big message network
+            inp = torch.cat((self.state[x.node_from], x.edge_lengths, coord_sum.view(x.edge_lengths.shape),
+                             dot_prod_1.view(x.edge_lengths.shape),#), 1)
+                             dot_prod_2.view(x.edge_lengths.shape)), 1)
+            message = self.message_net(inp)
+            '''# Input to message passing networks
             inp = torch.cat((self.state[x.node_from], x.edge_lengths), 1)
 
             # Message networks
-            message = self.message_net(inp)
+            message = self.message_net(inp)'''
 
             # Aggregate: Sum messages
             self.state.index_add_(0, x.node_to, message)
