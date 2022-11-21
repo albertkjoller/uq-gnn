@@ -1,8 +1,5 @@
 """Simple invariant and equivariant graph neural networks."""
 import torch
-from Distributions import NormalInverseGamma
-
-
 
 class GNNInvariant(torch.nn.Module):
     """Translation and rotation invariant graph neural network.
@@ -81,45 +78,51 @@ class GNNInvariant(torch.nn.Module):
 
         # Output
         out = self.output_net(self.graph_state)
-        # NormalInverseGamma(1, 1, 1, 1)
         return out
 
 
-class GNNEquivariant2D(torch.nn.Module):
+class GNNEvidentialInvariant(torch.nn.Module):
     """Translation and rotation invariant graph neural network.
 
     Keyword Arguments
     -----------------
-        output_dim : Dimension of output (default 7)
+        output_dim : Dimension of output (default 2)
         state_dim : Dimension of the node states (default 10)
         num_message_passing_rounds : Number of message passing rounds
             (default 3)
     """
 
-    def __init__(self, output_dim=4, state_dim=10,
-                 num_message_passing_rounds=3):
+    def __init__(self, state_dim=10, num_message_passing_rounds=3, device='cpu'):
         super().__init__()
 
-        # Define dimensions and other hyperparameters
+        # Set input dimensions and other hyperparameters
         self.state_dim = state_dim
-        self.edge_dim = 1
-        self.output_dim = output_dim
         self.num_message_passing_rounds = num_message_passing_rounds
 
+        # Define locked parameters
+        self.edge_dim = 1
+        self.output_dim = 4
+
         # Message passing networks
-        self.message_net_dot = torch.nn.Sequential(
-            torch.nn.Linear(self.state_dim+self.edge_dim, self.state_dim),
-            torch.nn.Tanh())
-        self.message_net_cross = torch.nn.Sequential(
-            torch.nn.Linear(self.state_dim+self.edge_dim, self.state_dim),
-            torch.nn.Tanh())
-        self.message_net_vector = torch.nn.Sequential(
+        self.message_net = torch.nn.Sequential(
             torch.nn.Linear(self.state_dim+self.edge_dim, self.state_dim),
             torch.nn.Tanh())
 
-        # State output network
-        self.output_net = torch.nn.Linear(
-            self.state_dim, self.output_dim)
+        # Define layers
+        layer1 = torch.nn.Linear(self.state_dim, self.output_dim)
+        torch.nn.init.xavier_normal_(layer1.weight)
+
+        # State output network --> (gamma, v, alpha, beta)
+        self.output_net = torch.nn.Sequential(
+            layer1,
+        )
+
+        # Speficy activation functions
+        self.softplus = torch.nn.Softplus()
+
+        # Utilize GPU?
+        self.device = device
+        self.to(device)
 
     def forward(self, x):
         """Evaluate neural network on a batch of graphs.
@@ -138,8 +141,6 @@ class GNNEquivariant2D(torch.nn.Module):
             node_to, node_from : Shorthand for column 0 and 1 in edge_list
             edge_lengths : torch.tensor (E)
                 Edge features
-            edge_vectors : torch.tensor (E x 2)
-                Edge vector features
 
         Returns
         -------
@@ -148,38 +149,60 @@ class GNNEquivariant2D(torch.nn.Module):
 
         """
         # Initialize node features to zeros
-        self.state = torch.zeros([x.num_nodes, self.state_dim])
-        self.state_vec = torch.zeros([x.num_nodes, 2, self.state_dim])
+        self.state = torch.zeros([x.num_nodes, self.state_dim]).to(self.device)
 
         # Loop over message passing rounds
         for _ in range(self.num_message_passing_rounds):
             # Input to message passing networks
             inp = torch.cat((self.state[x.node_from], x.edge_lengths), 1)
 
-            # Compute dot and cross product
-            dot_product = dot(
-                self.state_vec[x.node_from], self.state_vec[x.node_to])
-            cross_product = cross(
-                self.state_vec[x.node_from], self.state_vec[x.node_to])
-
             # Message networks
-            message = (self.message_net_dot(inp) * dot_product +
-                       self.message_net_cross(inp) * cross_product)
-            message_vec = (self.message_net_vector(inp)[:, None, :] *
-                           x.edge_vectors[:, :, None])
+            message = self.message_net(inp)
 
             # Aggregate: Sum messages
             self.state.index_add_(0, x.node_to, message)
-            self.state_vec.index_add_(0, x.node_to, message_vec)
 
         # Aggretate: Sum node features
-        self.graph_state = torch.zeros((x.num_graphs, self.state_dim))
+        self.graph_state = torch.zeros((x.num_graphs, self.state_dim)).to(self.device)
         self.graph_state.index_add_(0, x.node_graph_index, self.state)
 
-        # Output
-        out = self.output_net(self.graph_state)
+        # Get parameters of NIG distribution (4-dimensional output)
+        evidential_params_ = self.output_net(self.graph_state) # (gamma, v, alpha, beta)
+        # Apply activations as specified after Equation 10 in the paper
+        gamma, v, alpha, beta = torch.tensor_split(evidential_params_, 4, axis=1)
+        out = torch.concat([gamma, self.softplus(v), self.softplus(alpha) + 1, self.softplus(beta)], axis=1)
         return out
-    
+
+
+class EvidentialToyModel(torch.nn.Module):
+    """
+    Toy model for verifying that evidential learning works.
+    """
+
+    def __init__(self, hidden_dim=8, device='cpu'):
+        super().__init__()
+
+        # Regression network for 1D toy task
+        self.net = torch.nn.Sequential(
+            torch.nn.Linear(1, hidden_dim),
+            torch.nn.Linear(hidden_dim, hidden_dim),
+            torch.nn.Tanh(),
+            torch.nn.Linear(hidden_dim, 4), # (gamma, v, alpha, beta)
+        )
+
+        # Speficy activation functions
+        self.softplus = torch.nn.Softplus()
+
+    def forward(self, x):
+        # Get parameters of NIG distribution (4-dimensional output)
+        evidential_params_ = self.net(x) # (gamma, v, alpha, beta)
+        # Apply activations as specified after Equation 10 in the paper
+        gamma, v, alpha, beta = torch.tensor_split(evidential_params_, 4, axis=1)
+        out = torch.concat([gamma, self.softplus(v), self.softplus(alpha) + 1, self.softplus(beta)], axis=1)
+        return out
+
+
+
 
 def cross(v1, v2):
     """Compute the 2-d cross product.

@@ -1,0 +1,13 @@
+# Normal Inverse-Gamma distribution
+1) Implement the loss function
+2) Implement as a child-class of torch.Distribution
+    2.1) s.t. sampling, calling the model properties, etc. is possible
+
+
+# Cross-product
+1) Implement 3D cross product
+
+
+# Training loop
+1) Add batch loop
+2) Add MSE to Tensorboard (alredy computed as train_acc and val_acc) (maybe RMSE?)
