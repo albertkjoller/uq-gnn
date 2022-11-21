@@ -338,69 +338,25 @@ def synthetic_dataset(path = 'data/', device='cpu'):
 
     graph_list = range(num_graphs)
     # todo is target edge_length?
-    graph_info = {'graph_list': graph_list, 'target': 'edge_length', 'extras': extras}
+    graph_info = {'graph_list': graph_list, 'target': 'edge_lengths', 'extras': extras}
 
     graph_data = {}
     for graph_idx in graph_list:
         graph_data[graph_idx] = {}
-        graph_data[graph_idx]['graph_idx'] = graph_idx # for reference
-
-        # NODE/ATOM RELATED:
+        # NODE RELATED:
         #   - use node_list to filter some data further on
-        graph_data[graph_idx]['node_list'] =
-        graph_data[graph_idx]['num_nodes'] =
-        # Node graph index, molecule number each atom belongs to
-        # Node coordinates
-        graph_data[graph_idx]['node_coordinates'] =
+        graph_data[graph_idx]['num_nodes'] = len((data[torch.where(data[:, -1] == graph_idx)[0]][:, :2]).flatten().unique())
+
+        graph_data[graph_idx]['node_list'] = torch.arange(0, graph_data[graph_idx]['num_nodes'])
+        graph_data[graph_idx]['graph_idx'] = graph_idx # for reference
         # EDGE RELATED:
+        graph_data[graph_idx]['node_coordinates'] = graph_coords[torch.unique(data[torch.where(data[:, -1] == graph_idx)[0], 0]).to(torch.long)].to(torch.long)
         # Edge list - fully connected graphs thus perform possible combinations
-        graph_data[graph_idx]['edge_list'] =
-
-
-
-
-    # Split train and test data
-    idxs = np.arange(num_graphs)
-
-
-    train_idxs = np.random.choice(idxs, int(num_graphs * (1 - test_size)), replace=False)
-    test_idxs = np.setdiff1d(idxs, train_idxs)
-    train_graphs = get_info(data, train_idxs, graph_idx, graph_coords)
-    test_graphs = get_info(data, train_idxs, graph_idx, graph_coords)
-
-    # Store information
-    data = dict({'train': GraphDataset(), 'test': GraphDataset()})
-    for dtype, graphs_ in {'train': train_graphs, 'test': test_graphs}.items():
-        data[dtype].node_coordinates = graphs_[0].to(self.device)
-        data[dtype].node_graph_index = graphs_[1].to(self.device)
-        data[dtype].edge_list = graphs_[2].to(self.device)
-        data[dtype].target = graphs_[3].unsqueeze(1).to(self.device)
-        data[dtype].num_graphs = graphs_[3].__len__()
-    x = 1
+        graph_data[graph_idx]['edge_list'] = torch.tensor(list(combinations(graph_data[graph_idx]['node_list'], 2))).to(torch.long)
+        #graph_data[graph_idx]['edge_list'] = data[torch.where(data[:, -1] == graph_idx)[0]][:, :2]
 
     return graph_info, graph_data
 
-
-def get_info(self, data, idxs, graph_idx, graph_coords):
-    new_coords = torch.tensor([])
-    new_graph_idx = torch.tensor([])
-    new_edge_list = torch.tensor([])
-    target = torch.tensor([])
-    for count, i in enumerate(idxs):
-        if count == 0:
-            nc = graph_coords[torch.unique(data[torch.where(data[:, -1] == graph_idx[i])[0], 0]).to(torch.long)]
-            new_coords = nc
-            new_graph_idx = graph_idx[i] * torch.ones(nc.__len__())
-            new_edge_list = data[torch.where(data[:, -1] == graph_idx[i])[0]][:, :2]
-            target = data[i, 3]
-        else:
-            nc = graph_coords[torch.unique(data[torch.where(data[:, -1] == graph_idx[i])[0], 0]).to(torch.long)]
-            new_coords = torch.vstack((new_coords, nc))
-            new_graph_idx = torch.hstack((new_graph_idx, graph_idx[i] * torch.ones(nc.__len__())))
-            new_edge_list = torch.vstack((new_edge_list, data[torch.where(data[:, -1] == graph_idx[i])[0]][:, :2]))
-            target = torch.hstack((target, data[i, 3]))
-    return new_coords.to(torch.float), new_graph_idx.to(torch.long), new_edge_list.to(torch.long), target.to(
-        torch.float)
 
 
 def QM7_dataset(path='data/qm7.mat', device='cpu'):
@@ -538,13 +494,12 @@ class collate_fn_class():
         batch.node_list = batch.node_list.to(torch.long)
         batch.edge_list = batch.edge_list.to(torch.long)
         batch.node_graph_index = batch.node_graph_index.to(torch.long)
-        # defining target
-        batch.target = extra_data[self.target]
 
         if self.extras != False:
             for attribute in self.extras:
                 setattr(batch, attribute, extra_data[attribute])
-
+        # defining target
+        batch.target = getattr(batch, self.target)
         return batch
 
 
