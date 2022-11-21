@@ -91,14 +91,14 @@ if __name__ == '__main__':
 
     coords = pd.read_csv('../datasets_files/coordinates_synthetic.csv')
     coords = torch.tensor(np.array(coords))
+    #torch.manual_seed(42)
 
     graph_idx = edges[:, -1]
 
     # Load data
     synthetic_data = SyntheticData(data=edges, graph_idx=graph_idx, graph_coords=coords)
 
-    train_data = synthetic_data.data['train']
-    test_data = synthetic_data.data['test']
+    train_data = synthetic_data.data
 
     # Setup regression network
     net = GNNInvariant(state_dim=10, output_dim=4, num_message_passing_rounds=3)
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     experiment_name = 'test2'
 
     # Run training loop
-    train(train_data, test_data, net, optimizer, loss_function=loss_function, lr=0.01,
+    train(train_data, train_data, net, optimizer, loss_function=loss_function, lr=0.01,
           epochs=500, val_every_step=50, store_train_every=50,
           experiment_name=experiment_name, tensorboard_logdir=tensorboard_logdir)
 
