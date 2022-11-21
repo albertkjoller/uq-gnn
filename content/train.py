@@ -9,12 +9,12 @@ import numpy as np
 from tqdm import trange
 
 import Datasets
-from GNNModels import GNNEvidentialInvariant
+from GNNModels import GNNEvidentialInvariant, GNNInvariant
 from losses import NIGLoss
 
 def train(train_data, test_data, net, optimizer, lr=0.01, loss_function=torch.nn.MSELoss(), epochs=1000,
           val_every_step=50, store_train_every=50,
-          tensorboard_logdir='logs', experiment_name=str(time.time())):
+          tensorboard_logdir='logs_felix', experiment_name=str(time.time())):
 
     # Setup tensorboard
     writer = SummaryWriter(Path(f"{tensorboard_logdir}")/experiment_name)
@@ -87,21 +87,21 @@ if __name__ == '__main__':
     test_data = QM9.data['test']
 
     # Setup regression network
-    net = GNNEvidentialInvariant(state_dim=10, num_message_passing_rounds=3, device=device)
+    net = GNNInvariant(state_dim=10, num_message_passing_rounds=3, device=device)
     #loss_function = torch.nn.MSELoss()
     loss_function = NIGLoss
     optimizer = torch.optim.Adam(net.parameters(),)
 
     # Training parameters
-    epochs = 500
+    epochs = 1000
 
     # Tensorboard configurations
-    tensorboard_logdir = '../logs/'
+    tensorboard_logdir = 'logs_felix/'
     experiment_name = 'evidential_test'
 
     # Run training loop
     train(train_data, test_data, net, optimizer, loss_function=loss_function, lr=0.01,
-          epochs=3000, val_every_step=50, store_train_every=50,
+          epochs=epochs, val_every_step=50, store_train_every=50,
           experiment_name=experiment_name, tensorboard_logdir=tensorboard_logdir)
 
 
