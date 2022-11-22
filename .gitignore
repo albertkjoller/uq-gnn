@@ -8,3 +8,8 @@ __pycache__/
 logs/
 
 .idea
+
+data/
+*.pt
+*.pth
+*.ckpt
