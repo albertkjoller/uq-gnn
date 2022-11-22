@@ -175,7 +175,7 @@ class EvidentialGNN3D(torch.nn.Module):
             # DOT: node_coordinates_to/from and edge directions -> 71%
             dot_prod_2 = dot3D(x.node_coordinates[x.node_from], x.edge_vectors).view(x.edge_lengths.shape)
             # Big message network
-            inp = torch.cat((self.state[x.node_from], x.edge_lengths, coord_sum.view(x.edge_lengths.shape),
+            inp = torch.cat((self.state[x.node_from], x.edge_lengths.to(self.device), coord_sum.view(x.edge_lengths.shape).to(self.device),
                              dot_prod_1.view(x.edge_lengths.shape),#), 1)
                              dot_prod_2.view(x.edge_lengths.shape)), 1)
             message = self.message_net(inp)
