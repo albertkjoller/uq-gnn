@@ -24,7 +24,7 @@ A few examples are provided for training models:
 ### Toy Dataset - 1D
 #### Evidential learning
 
-![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/master/figures/epistemic.gif)
+![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif)
 
 ***OBS***: *For reproducing [Amini et al.](https://arxiv.org/pdf/1910.02600.pdf), run with these
 arguments:*
