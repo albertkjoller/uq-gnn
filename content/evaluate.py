@@ -20,7 +20,7 @@ def make_gif(img_dir, filename, duration=100):
 
 if __name__ == '__main__':
 
-    experiment_name = 'REPRODUCTION-v3'
+    experiment_name = 'REPRODUCTION-v1'
 
     # when running with args
     make_gif(f"../results/{experiment_name}/aleatoric", 'aleatoric.gif')
