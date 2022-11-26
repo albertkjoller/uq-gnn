@@ -1,9 +1,10 @@
 
 import torch
+import gpytorch
 
 from content.modules.Datasets import ToyDataset1D, QM7_dataset, synthetic_dataset, get_loaders
-from content.modules.GNNModels import EvidentialToyModel1D, EvidentialGNN3D
-from content.modules.Losses import MSELoss, NIGLoss
+from content.modules.GNNModels import EvidentialToyModel1D, EvidentialGNN3D, BaselineToyModel1D
+from content.modules.Losses import RMSELoss, NIGLoss
 
 def retrieve_dataset(args):
     """
@@ -12,7 +13,9 @@ def retrieve_dataset(args):
 
     device = torch.device(args.device)
     if args.dataset == 'TOY1D':
-        return ToyDataset1D(B=args.batch_size, N=1024, device=device)
+        return {'train': ToyDataset1D(B=args.batch_size, N=1024, range_=(-4, 4), noise_level=args.toy_noise_level, device=device),
+                'val': ToyDataset1D(B=args.batch_size, N=1024, range_=(-4, 4), noise_level=args.toy_noise_level, device=device)}
+
     elif args.dataset == 'QM7':
         return QM7_dataset(path=f"{args.data_dir}/QM7/qm7.mat", device=device)
     elif args.dataset == 'SYNTHETIC':
@@ -39,7 +42,7 @@ def load_data(args):
         dataset = retrieve_dataset(args)
 
         if args.dataset == 'TOY1D':
-            loaders = {'train': dataset.batches, 'val': dataset, 'test': None}
+            loaders = {'train': dataset['train'].batches, 'val': dataset['val'], 'test': None}
         else:
             print("\nCREATING DATALOADER OBJECTS...")
 
@@ -57,17 +60,21 @@ def load_data(args):
     return loaders
 
 def get_model_specifications(args):
+    likelihood = None
+
     # MODEL
     if args.model == 'TOY1D':
         model = EvidentialToyModel1D()
+    elif args.model == 'BASE1D':
+        model = BaselineToyModel1D()
     elif args.model == 'GNN3D':
         model = EvidentialGNN3D(device=torch.device(args.device))
     else:
         raise NotImplementedError("Specified model is currently not implemented.")
 
     # LOSS
-    if args.loss_function == 'MSE':
-        loss_function = MSELoss()
+    if args.loss_function == 'RMSE':
+        loss_function = RMSELoss()
     elif args.loss_function == 'NIG':
         assert args.NIG_lambda != None, "Specify NIG_lambda for using the NIG loss function..."
         loss_function = NIGLoss(lambd_=args.NIG_lambda)

@@ -31,6 +31,12 @@ def get_arguments(parser):
         required=True,
     )
     parser.add_argument(
+        "--toy_noise_level",
+        type=float,
+        help="Noise level when generating the data.",
+        default=3.0,
+    )
+    parser.add_argument(
         "--batch_size",
         type=int,
         help="Batch size to be used.",
@@ -56,7 +62,7 @@ def get_arguments(parser):
     parser.add_argument(
         "--NIG_lambda",
         type=float,
-        help="Lambda value when running NIG loss function",
+        help="Lambda value when running NIG loss function.",
     )
     parser.add_argument(
         "--lr",
@@ -96,7 +102,19 @@ def check_assertions(args):
         assert torch.cuda.is_available() == True, "Your system does not support running on GPU."
     # TODO: add more assertions for input arguments
 
+def determine_run_version(args):
 
+    version_ = args.experiment_name
+    version_ += f"_data.{args.dataset}"
+    version_ += f"_loss.{args.loss_function}"
+    if args.loss_function == 'NIG':
+        version_ += f"_lambda.{args.NIG_lambda}"
+    version_ += f"_epochs.{args.epochs}"
+    version_ += f"_lr.{args.lr}"
+    version_ += f"_batch.{args.batch_size}"
+    version_ += f"_seed.{args.seed}"
+
+    return version_
 
 if __name__ == '__main__':
 
@@ -118,9 +136,17 @@ if __name__ == '__main__':
         model, loss_function, optimizer = get_model_specifications(args)
 
         # Run training loop
-        train(loaders, model, optimizer, loss_function=loss_function,
-              epochs=args.epochs, val_every_step=args.val_every_step,
-              experiment_name=args.experiment_name, tensorboard_logdir=args.tensorboard_logdir)
+        train(loaders, model, optimizer,
+              loss_function=loss_function,
+              epochs=args.epochs,
+              val_every_step=args.val_every_step,
+              experiment_name=args.experiment_name,
+              tensorboard_logdir=args.tensorboard_logdir,
+              tensorboard_filename=determine_run_version(args),
+              )
+
+    # TODO: add argument for saving model... (state_dict)
+
 
     elif args.mode == 'test':
         raise NotImplementedError("Evaluation run currently not implemented...")

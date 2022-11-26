@@ -1,4 +1,6 @@
 
+import os
+
 import torch
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
@@ -15,11 +17,13 @@ from numba import jit
 from dgl.data import QM9Dataset
 
 class ToyDataset1D:
-    def __init__(self, B: int, N: int, device: torch.device, visualize_on_load=True, seed=42):
+    def __init__(self, B: int, N: int, range_, device: torch.device, noise_level: float, visualize_on_load=False, seed=42):
         # Set seed and device
         self.seed = seed
         torch.manual_seed(seed)
         self.device = device
+        self.range_ = range_
+        self.noise_level = noise_level
 
         # Create batches
         self.N = N # NUMBER OF POINTS
@@ -45,11 +49,11 @@ class ToyDataset1D:
         self.unbatched_data = self.data
         self.data = list(zip(self.data['data'], self.data['target']))
 
-    def create_dataset(self):
+    def create_dataset(self, ):
         self.data = {}
         order_ = torch.randperm(self.N)  # shuffle data
-        self.data['data'] = torch.arange(-4, 4, 8 / self.N)[order_].reshape(-1, self.B, 1).to(self.device)
-        self.data['target'] = self.data['data'] ** 3 + (torch.randn(self.N, 1).reshape(-1, self.B, 1) * 3).to(self.device)
+        self.data['data'] = torch.FloatTensor(self.N).uniform_(self.range_[0], self.range_[1])[order_].reshape(-1, self.B, 1).to(self.device)
+        self.data['target'] = self.data['data'] ** 3 + (torch.randn(self.N, 1).reshape(-1, self.B, 1) * self.noise_level).to(self.device)
 
     def visualize_dataset(self, figsize=(12, 8)):
         # plot data
@@ -59,30 +63,45 @@ class ToyDataset1D:
         plt.xlim([-6.5, 6.5])
         plt.show()
 
-    def plot_regression_line(self, model: torch.nn.Module, plot_uncertainty=True, save_path=None, show=True):
-        # Predict on the data range
-        toy_ = torch.arange(-6, 6, 12 / self.N).reshape(-1, 1).to(self.device)
-        outputs = model(toy_)
+    def plot_regression_line(self, model: torch.nn.Module, epoch: int, uncertainty_type: str, save_path=None, show=True):
 
-        # Get evidential parameters
-        gamma, v, alpha, beta = torch.tensor_split(outputs, 4, axis=1)
+        # Predict on the data range
+        toy_ = torch.arange(-6, 6, 12 / (4 * self.N)).reshape(-1, 1).to(self.device)
+        outputs = gamma = model(toy_)
+
+        if 'Evidential' in model.__class__.__name__:
+            # Get evidential parameters
+            gamma, v, alpha, beta = torch.tensor_split(outputs, 4, axis=1)
 
         # Reformat tensors
         xaxis = toy_.detach().flatten().cpu().numpy()
         y_true = (toy_ ** 3).detach().flatten().cpu().numpy()
         y_pred = gamma.detach().flatten().cpu().numpy()
-        aleatoric = (beta / (alpha - 1)).detach().flatten().cpu().numpy()
-        epistemic = (beta / (v * (alpha - 1))).detach().flatten().cpu().numpy()
+
+        if uncertainty_type == 'aleatoric':
+            uncertainty = (beta / (alpha - 1)).detach().flatten().cpu().numpy()
+        elif uncertainty_type == 'epistemic':
+            uncertainty = (beta / (v * (alpha - 1))).detach().flatten().cpu().numpy()
+        else:
+            uncertainty = np.ones(xaxis.__len__())
 
         # Gather information in dataframe for plotting
         results = pd.DataFrame({'xaxis': xaxis,
                                 'y_true': y_true,
                                 'y_pred': y_pred,
-                                'aleatoric': aleatoric,
-                                'epistemic': epistemic})
+                                f'{uncertainty_type}': uncertainty,
+                                })
+
+        # Print uncertainty estimates
+        print(f"\n{uncertainty_type.upper()} (-4, 4): {np.round(results[np.logical_and(results['xaxis'] > -4, results['xaxis'] < 4)][uncertainty_type].sum(), 2)}")
+        print(f"{uncertainty_type.upper()} ]-4, 4[: {np.round(results[np.logical_or(results['xaxis'] < -4, results['xaxis'] > 4)][uncertainty_type].sum(), 2)}")
+
+        # Replace inf for visualization purposes
+        results[uncertainty_type].replace(np.inf, 1e6, inplace=True)
 
         # Plot regression line and data points
-        plt.plot(self.unbatched_data['data'].detach().flatten().cpu(), self.unbatched_data['target'].detach().flatten().cpu(), 'k.')
+        plt.figure(dpi=250)
+        plt.plot(self.unbatched_data['data'].detach().flatten().cpu(), self.unbatched_data['target'].detach().flatten().cpu(), 'ko', markersize=0.5)
         plt.plot(results['xaxis'], results['y_true'], '--r')
         plt.plot(results['xaxis'], results['y_pred'])
 
@@ -91,18 +110,18 @@ class ToyDataset1D:
         plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6, -4, alpha=.3, interpolate=True, color='gray')
         plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6, alpha=.3, interpolate=True, color='gray')
 
-        if plot_uncertainty == True:
-            plt.fill_between(results['xaxis'], results['y_pred'] - results['epistemic'],
-                             results['y_pred'] + results['epistemic'], alpha=.3, interpolate=True)  # step='post')
+        plt.fill_between(results['xaxis'], results['y_pred'] - 0.99 * results[uncertainty_type], results['y_pred'] + 0.99 * results[uncertainty_type], alpha=.2, interpolate=True, color='C0')  # step='post')
+        plt.fill_between(results['xaxis'], results['y_pred'] - 0.95 * results[uncertainty_type], results['y_pred'] + 0.95 * results[uncertainty_type], alpha=.2, interpolate=True, color='C0')  # step='post')
+        plt.fill_between(results['xaxis'], results['y_pred'] - 0.68 * results[uncertainty_type],  results['y_pred'] + 0.68 * results[uncertainty_type], alpha=.2, interpolate=True, color='C0')  # step='post')
 
         plt.xlim([-6.5, 6.5])
-        plt.ylim([-6.5 ** 3, 6.5 ** 3])
+        plt.ylim([-150, 150])
+        plt.title(f"EPOCH = {epoch}", fontsize=20, weight='bold')
 
         if save_path != None:
-            plt.savefig(save_path)
+            plt.savefig(save_path/f"{epoch}.png")
         if show == True:
             plt.show(block=False)
-            plt.pause(1)
             plt.close("all")
 
 class GraphDataset():

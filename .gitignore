@@ -12,6 +12,7 @@ logs/
 
 .idea
 
+results/
 data/
 *.pt
 *.pth

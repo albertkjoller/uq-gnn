@@ -200,24 +200,68 @@ class EvidentialGNN3D(torch.nn.Module):
         return out
 
 
-class EvidentialToyModel1D(torch.nn.Module):
+
+class BaselineToyModel1D(torch.nn.Module):
     """
-    Toy model for verifying that evidential learning works for approximating a 3rd order polynomial.
+    Toy baseline model for 3rd order polynomial.
     """
 
-    def __init__(self, hidden_dim=32):
+    def __init__(self, hidden_dim=100):
         super().__init__()
 
         # Regression network for 1D toy task
         self.net = torch.nn.Sequential(
             torch.nn.Linear(1, hidden_dim),
+            torch.nn.ReLU(),
             torch.nn.Linear(hidden_dim, hidden_dim),
-            torch.nn.Tanh(),
-            torch.nn.Linear(hidden_dim, 4), # (gamma, v, alpha, beta)
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_dim, hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_dim, 1), # (mu)
         )
+        # Initialize weights
+        self.net.apply(self.init_weights)
 
         # Speficy activation functions
         self.softplus = torch.nn.Softplus()
+
+    def init_weights(self, layer): # Found here: https://www.askpython.com/python-modules/initialize-model-weights-pytorch
+        if type(layer) == torch.nn.Linear:
+            torch.nn.init.kaiming_normal_(layer.weight, mode='fan_in', nonlinearity='relu')
+
+    def forward(self, x):
+        x = x.data
+        # Get parameters of NIG distribution (4-dimensional output)
+        mu = self.net(x) # (mu)
+        return mu
+
+class EvidentialToyModel1D(torch.nn.Module):
+    """
+    Toy model for verifying that evidential learning works for approximating a 3rd order polynomial.
+    """
+
+    def __init__(self, hidden_dim=100):
+        super().__init__()
+
+        # Regression network for 1D toy task
+        self.net = torch.nn.Sequential(
+            torch.nn.Linear(1, hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_dim, hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_dim, hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_dim, 4), # (gamma, v, alpha, beta)
+        )
+        # Initialize weights
+        self.net.apply(self.init_weights)
+
+        # Speficy activation functions
+        self.softplus = torch.nn.Softplus()
+
+    def init_weights(self, layer): # Found here: https://www.askpython.com/python-modules/initialize-model-weights-pytorch
+        if type(layer) == torch.nn.Linear:
+            torch.nn.init.kaiming_normal_(layer.weight, mode='fan_in', nonlinearity='relu')
 
     def forward(self, x):
         x = x.data
@@ -225,37 +269,8 @@ class EvidentialToyModel1D(torch.nn.Module):
         evidential_params_ = self.net(x) # (gamma, v, alpha, beta)
         # Apply activations as specified after Equation 10 in the paper
         gamma, v, alpha, beta = torch.tensor_split(evidential_params_, 4, axis=1)
-        out = torch.concat([gamma, self.softplus(v), self.softplus(alpha) + 1, self.softplus(beta)], axis=1)
+        out = torch.concat([gamma, self.softplus(v), self.softplus(alpha).to(torch.float64).add(1), self.softplus(beta)], axis=1)
         return out
-
-
-class EvidentialToyModel1D_OLD(torch.nn.Module):
-    """
-    Toy model for verifying that evidential learning works for approximating a 3rd order polynomial.
-    """
-
-    def __init__(self, hidden_dim=32):
-        super().__init__()
-
-        # Regression network for 1D toy task
-        self.net = torch.nn.Sequential(
-            torch.nn.Linear(1, hidden_dim),
-            torch.nn.Linear(hidden_dim, hidden_dim),
-            torch.nn.Tanh(),
-            torch.nn.Linear(hidden_dim, 4), # (gamma, v, alpha, beta)
-        )
-
-        # Speficy activation functions
-        self.softplus = torch.nn.Softplus()
-
-    def forward(self, x):
-        # Get parameters of NIG distribution (4-dimensional output)
-        evidential_params_ = self.net(x) # (gamma, v, alpha, beta)
-        # Apply activations as specified after Equation 10 in the paper
-        gamma, v, alpha, beta = torch.tensor_split(evidential_params_, 4, axis=1)
-        out = torch.concat([gamma, self.softplus(v), self.softplus(alpha) + 1, self.softplus(beta)], axis=1)
-        return out
-
 
 
 ### INVARIANT OPERATIONS

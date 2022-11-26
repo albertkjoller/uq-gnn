@@ -1,3 +1,4 @@
+import os
 import time
 from pathlib import Path
 from collections import defaultdict
@@ -9,10 +10,11 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 def train(dataloaders, model, optimizer, loss_function, epochs=1000,
-          val_every_step=50, tensorboard_logdir='logs', experiment_name=str(time.time())):
+          val_every_step=50, experiment_name=str(time.time()),
+          tensorboard_logdir='logs', tensorboard_filename=str(time.time())):
 
     # Setup tensorboard
-    writer = SummaryWriter(Path(f"{tensorboard_logdir}")/experiment_name)
+    writer = SummaryWriter(Path(f"{tensorboard_logdir}")/tensorboard_filename)
 
     # unpacking loaders
     train_loader, val_loader, test_loader = tuple(dataloaders.values())
@@ -25,7 +27,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
 
     with trange(epochs) as t:
 
-        val_step = 0
+        val_step = -1
         for epoch in t:
             batch_loss, batch_xtra_losses = [], defaultdict(list)
             for idx_batch, train_batch in enumerate(train_loader):
@@ -57,7 +59,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
                     # Change network mode
                     model.eval()
                     # Evaluate on validation batch
-                    val_loss = evaluate(model, val_loader, writer, epoch, loss_function)
+                    val_loss = evaluate(model, val_loader, writer, epoch, loss_function, experiment_name)
                     val_lss[val_step] = np.mean(val_loss)
                     # Switch back to training mode
                     model.train()
@@ -65,15 +67,25 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
                 val_step += 1
 
             # Print status
-            t.set_description_str(f'Training Loss: {train_lss[epoch]:.3f} \t| \t Validation Loss: {val_lss[val_step]:.3f} | Progress')
+            t.set_description_str(f'Training Loss: {train_lss[epoch-1]:.3f} \t| \t Validation Loss: {val_lss[val_step-1]:.3f} | Progress')
 
     # Close tensorboard
     writer.close()
 
-def evaluate(model, data, writer, epoch, loss_function):
+def evaluate(model, data, writer, epoch, loss_function, experiment_name):
 
-    if model.__class__.__name__ == 'EvidentialToyModel1D':
-        data.plot_regression_line(model)
+    if '1D' in model.__class__.__name__:
+        save_path = Path(f"results/{experiment_name}")
+        if 'Evidential' in model.__class__.__name__:
+            os.makedirs(save_path / 'epistemic', exist_ok=True)
+            os.makedirs(save_path / 'aleatoric', exist_ok=True)
+
+            data.plot_regression_line(model, epoch=epoch, uncertainty_type='epistemic', save_path=save_path / 'epistemic', show=False)
+            data.plot_regression_line(model, epoch=epoch, uncertainty_type='aleatoric', save_path=save_path / 'aleatoric', show=False)
+        else:
+            os.makedirs(save_path / 'baseline', exist_ok=True)
+            data.plot_regression_line(model, epoch, uncertainty_type='baseline', save_path=save_path / 'baseline', show=False)
+
         loss = 0
 
     elif model.__class__.__name__ == 'EvidentialGNN3D':
