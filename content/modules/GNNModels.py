@@ -95,7 +95,6 @@ class GNNInvariant(torch.nn.Module):
         return out
 
 
-
 class EvidentialGNN3D(torch.nn.Module):
     """Translation and rotation invariant graph neural network.
 
@@ -107,7 +106,7 @@ class EvidentialGNN3D(torch.nn.Module):
             (default 3)
     """
 
-    def __init__(self, device, state_dim=10, num_message_passing_rounds=3):
+    def __init__(self, device, state_dim=10, num_message_passing_rounds=3, eps=1e-7):
         super().__init__()
         self.model_type = 'evidential'
 
@@ -118,30 +117,41 @@ class EvidentialGNN3D(torch.nn.Module):
         # Define locked parameters
         self.edge_dim = 1
         self.output_dim = 4
+        self.num_features = 4
+        self.hidden_dim = 10
 
         # Message passing networks
-        '''self.message_net = torch.nn.Sequential(
-            torch.nn.Linear(self.state_dim+self.edge_dim, self.state_dim),
-            torch.nn.Tanh())'''
         self.message_net = torch.nn.Sequential(
-            torch.nn.Linear(self.state_dim + 4, self.state_dim),
-            torch.nn.Tanh())
-
-        # Define layers
-        layer1 = torch.nn.Linear(self.state_dim, self.output_dim)
-        torch.nn.init.xavier_normal_(layer1.weight)
-
-        # State output network --> (gamma, v, alpha, beta)
-        self.output_net = torch.nn.Sequential(
-            layer1,
+            torch.nn.BatchNorm1d(self.state_dim + self.num_features),
+            torch.nn.Linear(self.state_dim + self.num_features, self.hidden_dim),
+            torch.nn.Dropout(0.5),
+            torch.nn.Tanh(),
+            torch.nn.Linear(self.hidden_dim, self.state_dim),
+            torch.nn.Dropout(0.5),
+            torch.nn.Tanh(),
         )
+
+        # Output net
+        self.output_net = torch.nn.Sequential(
+            torch.nn.Linear(self.state_dim, self.output_dim) # (gamma, v, alpha, beta)
+        )
+
+        # Initialize weights
+        self.message_net.apply(self.init_weights)
+        self.output_net.apply(self.init_weights)
 
         # Speficy activation functions
         self.softplus = torch.nn.Softplus()
 
         # Utilize GPU? #TODO: move this out of the class itself and into the run-script
         self.device = device
+        self.eps = eps
         self.to(device)
+          
+    def init_weights(self, layer): # Found here: https://www.askpython.com/python-modules/initialize-model-weights-pytorch
+        if type(layer) == torch.nn.Linear:
+            torch.nn.init.kaiming_normal_(layer.weight, mode='fan_out', nonlinearity='relu') # Kaiming for Relu
+    
 
     def forward(self, x):
         """Evaluate neural network on a batch of graphs.
@@ -172,24 +182,27 @@ class EvidentialGNN3D(torch.nn.Module):
 
         # Loop over message passing rounds
         for _ in range(self.num_message_passing_rounds):
-            coord_sum = torch.sum(torch.abs(x.node_coordinates[x.node_from]), axis=1)
-            dot_prod_1 = dot3D(x.node_coordinates[x.node_from], x.node_coordinates[x.node_to]).view(x.edge_lengths.shape)
-            # DOT: node_coordinates_to/from and edge directions -> 71%
-            dot_prod_2 = dot3D(x.node_coordinates[x.node_from], x.edge_vectors).view(x.edge_lengths.shape)
-            # Big message network
-            inp = torch.cat((self.state[x.node_from], x.edge_lengths.to(self.device), coord_sum.view(x.edge_lengths.shape).to(self.device),
-                             dot_prod_1.view(x.edge_lengths.shape),#), 1)
-                             dot_prod_2.view(x.edge_lengths.shape)), 1)
-            message = self.message_net(inp)
-            '''# Input to message passing networks
-            inp = torch.cat((self.state[x.node_from], x.edge_lengths), 1)
+            # Preparing features
+            e_len = x.edge_lengths
+            coord_difference = torch.sum(torch.abs(x.node_coordinates[x.node_from] - x.node_coordinates[x.node_to]), axis=1)
+            dot_coord = dot3D(x.node_coordinates[x.node_from], x.node_coordinates[x.node_to]).view(x.edge_lengths.shape)
+            dot_diff = dot3D((x.node_coordinates[x.node_from] - x.node_coordinates[x.node_to]), x.edge_vectors).view(x.edge_lengths.shape)
 
-            # Message networks
-            message = self.message_net(inp)'''
+            # Stacking features
+            inp = torch.cat((self.state[x.node_from], 
+                            e_len, 
+                            coord_difference.view(e_len.shape),
+                            dot_coord.view(e_len.shape),
+                            dot_diff.view(e_len.shape),
+                            ), 1)
+
+            message = self.message_net(inp)
+
+            if int(sum(sum(torch.isnan(message)))) > 0:
+                stop = 1
 
             # Aggregate: Sum messages
             self.state.index_add_(0, x.node_to, message)
-
         # Aggretate: Sum node features
         self.graph_state = torch.zeros((x.num_graphs, self.state_dim)).to(self.device)
         self.graph_state.index_add_(0, x.node_graph_index, self.state)
@@ -198,8 +211,9 @@ class EvidentialGNN3D(torch.nn.Module):
         evidential_params_ = self.output_net(self.graph_state) # (gamma, v, alpha, beta)
         # Apply activations as specified after Equation 10 in the paper
         gamma, v, alpha, beta = torch.tensor_split(evidential_params_, 4, axis=1)
-        out = torch.concat([gamma, self.softplus(v), self.softplus(alpha) + 1, self.softplus(beta)], axis=1)
+        out = torch.concat([gamma, self.softplus(v) + self.eps, self.softplus(alpha).to(torch.float64).add(1), self.softplus(beta) + self.eps], axis=1)
         return out
+
 
 class BaselineGNN3D(torch.nn.Module):
     """Translation and rotation invariant graph neural network.
