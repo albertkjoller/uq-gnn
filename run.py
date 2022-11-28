@@ -51,7 +51,7 @@ def get_arguments(parser):
     parser.add_argument(
         "--loss_function",
         type=str,
-        help="Type of loss function. Either NIG or MSE.",
+        help="Type of loss function. Either NIG or MSE or GAUSSIANNLLoss.",
         default='NIG',
     )
     parser.add_argument(

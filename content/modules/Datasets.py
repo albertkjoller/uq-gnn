@@ -67,11 +67,13 @@ class ToyDataset1D:
 
         # Predict on the data range
         toy_ = torch.arange(-6, 6, 12 / (4 * self.N)).reshape(-1, 1).to(self.device)
-        outputs = gamma = model(toy_)
+        outputs = model(toy_)
 
         if 'Evidential' in model.__class__.__name__:
             # Get evidential parameters
             gamma, v, alpha, beta = torch.tensor_split(outputs, 4, axis=1)
+        else:
+            gamma, sigma = torch.tensor_split(outputs, 2, axis=1)
 
         # Reformat tensors
         xaxis = toy_.detach().flatten().cpu().numpy()
@@ -83,7 +85,7 @@ class ToyDataset1D:
         elif uncertainty_type == 'epistemic':
             uncertainty = (beta / (v * (alpha - 1))).detach().flatten().cpu().numpy()
         else:
-            uncertainty = np.ones(xaxis.__len__())
+            uncertainty = sigma.detach().flatten().cpu().numpy()
 
         # Gather information in dataframe for plotting
         results = pd.DataFrame({'xaxis': xaxis,
@@ -93,8 +95,9 @@ class ToyDataset1D:
                                 })
 
         # Print uncertainty estimates
-        print(f"\n{uncertainty_type.upper()} (-4, 4): {np.round(results[np.logical_and(results['xaxis'] > -4, results['xaxis'] < 4)][uncertainty_type].sum(), 2)}")
-        print(f"{uncertainty_type.upper()} ]-4, 4[: {np.round(results[np.logical_or(results['xaxis'] < -4, results['xaxis'] > 4)][uncertainty_type].sum(), 2)}")
+        if 'Evidential' in model.__class__.__name__:
+            print(f"\n{uncertainty_type.upper()} (-4, 4): {np.round(results[np.logical_and(results['xaxis'] > -4, results['xaxis'] < 4)][uncertainty_type].sum(), 2)}")
+            print(f"{uncertainty_type.upper()} ]-4, 4[: {np.round(results[np.logical_or(results['xaxis'] < -4, results['xaxis'] > 4)][uncertainty_type].sum(), 2)}")
 
         # Replace inf for visualization purposes
         results[uncertainty_type].replace(np.inf, 1e6, inplace=True)

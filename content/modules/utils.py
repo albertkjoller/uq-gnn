@@ -4,7 +4,7 @@ import gpytorch
 
 from content.modules.Datasets import ToyDataset1D, QM7_dataset, synthetic_dataset, get_loaders
 from content.modules.GNNModels import EvidentialToyModel1D, EvidentialGNN3D, BaselineToyModel1D
-from content.modules.Losses import RMSELoss, NIGLoss
+from content.modules.Losses import RMSELoss, NIGLoss, GAUSSIANNLLLoss
 
 def retrieve_dataset(args):
     """
@@ -76,6 +76,8 @@ def get_model_specifications(args):
         # LOSS
         if args.loss_function == 'RMSE':
             loss_function = RMSELoss()
+        elif args.loss_function == 'GAUSSIANNLLLoss':
+            loss_function = GAUSSIANNLLLoss()
         elif args.loss_function == 'NIG':
             assert args.NIG_lambda != None, "Specify NIG_lambda for using the NIG loss function..."
             loss_function = NIGLoss(lambd_=args.NIG_lambda)
