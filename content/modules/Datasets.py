@@ -103,7 +103,7 @@ class ToyDataset1D:
         fig.suptitle(f"EPOCH {epoch}")
         fig.suptitle(f"PARAMETERS (EPOCH = {epoch})", fontsize=20, weight='bold')
         os.makedirs(save_path / 'PARAMS', exist_ok=True)
-        plt.savefig(save_path / f"PARAMS/{epoch}.png")
+        plt.savefig(save_path / f"PARAMS/0{epoch}.png")
 
         if show == True:
             fig.show()
@@ -140,32 +140,34 @@ class ToyDataset1D:
                 plt.figure(dpi=250)
                 plt.plot(self.unbatched_data['data'].detach().flatten().cpu(), self.unbatched_data['target'].detach().flatten().cpu(), 'ko', markersize=0.5)
                 plt.plot(results['xaxis'], results['y_true'], '--r')
-                plt.plot(results['xaxis'], results['y_pred'], color='blue')
+                plt.plot(results['xaxis'], results['y_pred'], color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])
 
                 plt.vlines(-4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
                 plt.vlines(4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
                 plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6.5, -4, alpha=.3, interpolate=True, color='gray')
                 plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6.5, alpha=.3, interpolate=True, color='gray')
 
-                plt.fill_between(results['xaxis'], results['y_pred'] - 0.99 * results[uncertainty_type], results['y_pred'] + 0.99 * results[uncertainty_type], alpha=.2, interpolate=True, color='blue')  # step='post')
-                plt.fill_between(results['xaxis'], results['y_pred'] - 0.95 * results[uncertainty_type], results['y_pred'] + 0.95 * results[uncertainty_type], alpha=.2, interpolate=True, color='blue')  # step='post')
-                plt.fill_between(results['xaxis'], results['y_pred'] - 0.68 * results[uncertainty_type],  results['y_pred'] + 0.68 * results[uncertainty_type], alpha=.2, interpolate=True, color='blue')  # step='post')
+                plt.fill_between(results['xaxis'], results['y_pred'] - 0.99 * results[uncertainty_type], results['y_pred'] + 0.99 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+                plt.fill_between(results['xaxis'], results['y_pred'] - 0.95 * results[uncertainty_type], results['y_pred'] + 0.95 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+                plt.fill_between(results['xaxis'], results['y_pred'] - 0.68 * results[uncertainty_type],  results['y_pred'] + 0.68 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
 
                 plt.xlim([-6.5, 6.5])
                 plt.ylim([-150, 150])
                 plt.title(f"{uncertainty_type.upper()} (EPOCH = {epoch})", fontsize=20, weight='bold')
 
                 if save_path != None:
-                    plt.savefig(save_path / f"{uncertainty_type}/{epoch}.png")
+                    plt.savefig(save_path / f"{uncertainty_type}/0{epoch}.png")
                 if show == True:
                     plt.show(block=False)
                     plt.close("all")
 
-        if 'aleatoric' in uncertainty_types and 'epistemic' in uncertainty_types:
+
+        if 'aleatoric' in uncertainty_types and 'epistemic' in uncertainty_types and show==True:
             os.makedirs(save_path / "COMBINED_UNCERTAINTIES", exist_ok=True)
             results.plot(x='xaxis', y=['aleatoric', 'epistemic'])
-            plt.savefig(save_path / f"COMBINED_UNCERTAINTIES/{epoch}.png")
+            plt.savefig(save_path / f"COMBINED_UNCERTAINTIES/0{epoch}.png")
             plt.close("all")
+
 
 class GraphDataset():
     """Parent class for graph datasets.

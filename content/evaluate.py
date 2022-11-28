@@ -20,7 +20,7 @@ def make_gif(img_dir, filename, duration=150):
     os.chdir(img_dir)
     frame_one.save(f"../{filename}", format="GIF", append_images=frames,
                save_all=True, duration=duration, loop=0)
-
+    print(f"Created GIF: {filename}.gif")
     os.chdir(cwd)
 
 
@@ -133,14 +133,12 @@ def evaluate_model(loader, model, exp):
 
 
 
-"""
+
 if __name__ == '__main__':
 
     experiment_name = 'REPRODUCTION_debug'
 
     # when running with args
-    make_gif(f"../results/{experiment_name}/ALEATORIC", 'aleatoric.gif', duration=150)
-    make_gif(f"../results/{experiment_name}/EPISTEMIC", 'epistemic.gif', duration=150)
-    make_gif(f"../results/{experiment_name}/PARAMS", 'parameters.gif', duration=150)
-    make_gif(f"../results/{experiment_name}/COMBINED_UNCERTAINTIES", "combined.gif", duration=150)
-"""
+    make_gif(f"../results/{experiment_name}/ALEATORIC", 'aleatoric.gif', duration=100)
+    make_gif(f"../results/{experiment_name}/EPISTEMIC", 'epistemic.gif', duration=100)
+    make_gif(f"../results/{experiment_name}/PARAMS", 'parameters.gif', duration=100)
