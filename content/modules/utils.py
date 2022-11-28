@@ -3,7 +3,7 @@ import torch
 import gpytorch
 
 from content.modules.Datasets import ToyDataset1D, QM7_dataset, synthetic_dataset, get_loaders
-from content.modules.GNNModels import EvidentialToyModel1D, EvidentialGNN3D, BaselineToyModel1D
+from content.modules.GNNModels import EvidentialToyModel1D, EvidentialGNN3D, BaselineToyModel1D, BaselineGNN3D
 from content.modules.Losses import RMSELoss, NIGLoss, GAUSSIANNLLLoss
 
 def retrieve_dataset(args):
@@ -67,6 +67,8 @@ def get_model_specifications(args):
         model = EvidentialToyModel1D()
     elif args.model == 'BASE1D':
         model = BaselineToyModel1D()
+    elif args.model == 'BASE3D':
+        model = BaselineGNN3D(device=torch.device(args.device))
     elif args.model == 'GNN3D':
         model = EvidentialGNN3D(device=torch.device(args.device))
     else:

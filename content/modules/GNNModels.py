@@ -219,7 +219,7 @@ class BaselineGNN3D(torch.nn.Module):
 
         # Define locked parameters
         self.edge_dim = 1
-        self.output_dim = 4
+        self.output_dim = 2
 
         # Message passing networks
         '''self.message_net = torch.nn.Sequential(
@@ -301,8 +301,8 @@ class BaselineGNN3D(torch.nn.Module):
         # Get parameters of NIG distribution (4-dimensional output)
         evidential_params_ = self.output_net(self.graph_state)  # (gamma, v, alpha, beta)
         # Apply activations as specified after Equation 10 in the paper
-        gamma, v, alpha, beta = torch.tensor_split(evidential_params_, 4, axis=1)
-        out = torch.concat([gamma, self.softplus(v), self.softplus(alpha) + 1, self.softplus(beta)], axis=1)
+        mu, sigma = torch.tensor_split(evidential_params_, 2, axis=1)
+        out = torch.concat([mu, self.softplus(sigma)], axis=1)
         return out
 
 class BaselineToyModel1D(torch.nn.Module):

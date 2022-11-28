@@ -46,7 +46,7 @@ def get_arguments(parser):
     parser.add_argument(
         "--model",
         type=str,
-        help="The model type to use when training. Currently, either 'TOY1D' or 'GNN3D'."
+        help="The model type to use when training. Currently, either 'TOY1D', 'GNN3D', 'BASE1D', or 'BASE3D'."
     )
     parser.add_argument(
         "--loss_function",

@@ -109,5 +109,19 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
         if loss_function.__class__.__name__ == "NIGLoss":
             for name, loss_ in batch_xtra_losses.items():
                 writer.add_scalar(f'VALIDATION/{name}', np.mean(loss_), epoch)
+    else:
+        batch_loss, batch_xtra_losses = [], defaultdict(list)
+        for idx_batch, batch in enumerate(data):
+            # Compute return of model
+            outputs = model(batch)
 
+            # Compute loss
+            (loss_name, loss), xtra_losses = loss_function(outputs, batch.target)
+
+            batch_loss.append(loss.item())
+        loss = np.mean(batch_loss)
+        writer.add_scalar(f'VALIDATION/{loss_name}', loss, epoch)
+        if loss_function.__class__.__name__ == "NIGLoss":
+            for name, loss_ in batch_xtra_losses.items():
+                writer.add_scalar(f'VALIDATION/{name}', np.mean(loss_), epoch)
     return loss
