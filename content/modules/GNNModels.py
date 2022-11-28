@@ -14,6 +14,7 @@ class GNNInvariant(torch.nn.Module):
 
     def __init__(self, output_dim=2, state_dim=10, num_message_passing_rounds=3, device='cpu'):
         super().__init__()
+        self.model_type = 'evidential'
 
         # Define dimensions and other hyperparameters
         self.state_dim = state_dim
@@ -108,6 +109,7 @@ class EvidentialGNN3D(torch.nn.Module):
 
     def __init__(self, device, state_dim=10, num_message_passing_rounds=3):
         super().__init__()
+        self.model_type = 'evidential'
 
         # Set input dimensions and other hyperparameters
         self.state_dim = state_dim
@@ -312,6 +314,7 @@ class BaselineToyModel1D(torch.nn.Module):
 
     def __init__(self, hidden_dim=100):
         super().__init__()
+        self.model_type = 'evidential'
 
         # Regression network for 1D toy task
         self.net = torch.nn.Sequential(
@@ -350,6 +353,7 @@ class EvidentialToyModel1D(torch.nn.Module):
 
     def __init__(self, hidden_dim=100):
         super().__init__()
+        self.model_type = 'evidential'
 
         # Regression network for 1D toy task
         self.net = torch.nn.Sequential(

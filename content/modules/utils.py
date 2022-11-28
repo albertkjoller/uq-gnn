@@ -1,6 +1,6 @@
 
 import torch
-import gpytorch
+#import gpytorch
 
 from content.modules.Datasets import ToyDataset1D, QM7_dataset, synthetic_dataset, get_loaders
 from content.modules.GNNModels import EvidentialToyModel1D, EvidentialGNN3D, BaselineToyModel1D, BaselineGNN3D
