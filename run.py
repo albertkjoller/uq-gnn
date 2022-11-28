@@ -4,6 +4,7 @@ import torch
 import argparse
 
 from content.train import train
+from content.evaluate import evaluate_model
 from content.modules.utils import load_data, get_model_specifications
 
 def get_arguments(parser):
@@ -52,12 +53,12 @@ def get_arguments(parser):
     parser.add_argument(
         "--model",
         type=str,
-        help="The model type to use when training. Currently, either 'TOY1D' or 'GNN3D'."
+        help="The model type to use when training. Currently, either 'TOY1D', 'GNN3D', 'BASE1D', or 'BASE3D'."
     )
     parser.add_argument(
         "--loss_function",
         type=str,
-        help="Type of loss function. Either NIG or MSE.",
+        help="Type of loss function. Either NIG or MSE or GAUSSIANNLLoss.",
         default='NIG',
     )
     parser.add_argument(
@@ -130,7 +131,7 @@ def determine_run_version(args):
     return version_
 
 def save_model(model, args):
-    os.makedirs(args.save_path + f"/{args.experiment_name}")
+    os.makedirs(args.save_path + f"/{args.experiment_name}", exist_ok = True)
     torch.save(model.state_dict(), f"{args.save_path}/{args.experiment_name}/final.pth")
 
 def load_model(args):
@@ -138,6 +139,7 @@ def load_model(args):
     state_dict = torch.load(f"{args.save_path}/{args.experiment_name}/final.pth")
     model.load_state_dict(state_dict)
     model.eval()
+    return model
 
 if __name__ == '__main__':
 
@@ -173,7 +175,11 @@ if __name__ == '__main__':
 
 
     elif args.mode == 'evaluation':
+        # todo: extend for multiple models
         # Load model
         model = load_model(args)
+        # todo currently using train
+        evaluate_model(loader=loaders['train'], model=model, exp=args.experiment_name)
+        # we want the RMSE, NLL, (inference speed?)
 
-        raise NotImplementedError("Evaluation run currently not fully implemented...")
+        #raise NotImplementedError("Evaluation run currently not fully implemented...")

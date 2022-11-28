@@ -1,0 +1,18 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--mode", "train", "--data_dir" , "content/data" , "--dataset",  "QM7",  "--batch_size", "64", "--model", "GNN3D", "--epochs", "50" ,"--lr", "0.001", "--loss_function", "NIG", "--NIG_lambda", "0.0", "--val_every_step", "5", "--tensorboard_logdir", "logs" ,"--experiment_name", "test", "--seed", "42", "--device", "cpu"],
+        }
+    ]
+}

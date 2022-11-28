@@ -1,8 +1,11 @@
 # Uncertainty Quantification for Graph Neural Networks
 
 02456 - Deep Learning (Fall 2022) @ Technical University of Denmark
+Epistemic              |  Aleatoric
+:-------------------------:|:-------------------------:
+![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif)  |  ![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif)
 
-![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif)
+<!--- ![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif) --->
 
 ### Setup 
 
@@ -22,6 +25,11 @@ python run.py -h
 ```
 
 A few examples are provided for training models:
+
+### Data
+
+You can find the data [here](https://drive.google.com/drive/folders/1cSR59Bb4Tj_FiLei4866AD1-4GMr7dop?usp=sharing).
+Download the `data`-folder and place it in the `content`-directory!
 
 ### Toy Dataset - 1D
 #### Evidential learning
