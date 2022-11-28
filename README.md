@@ -1,10 +1,10 @@
 # Uncertainty Quantification for Graph Neural Networks
 
 02456 - Deep Learning (Fall 2022) @ Technical University of Denmark
+Epistemic              |  Aleatoric              |  Parameters
+:-------------------------:|:-------------------------:|:-------------------------:|
+![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif)  |  ![aleatoric_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/aleatoric.gif)  |  ![parameters_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/parameters.gif)
 
-Epistemic              |  Aleatoric           | Parameters
-:-------------------------::-------------------------::-------------------------:
-![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif)  |  ![aleatoric_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/aleatoric.gif) | ![parameters_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/parameters.gif)
 
 <!--- ![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif) --->
 
