@@ -23,6 +23,11 @@ python run.py -h
 
 A few examples are provided for training models:
 
+### Data
+
+You can find the data [here](https://drive.google.com/drive/folders/1cSR59Bb4Tj_FiLei4866AD1-4GMr7dop?usp=sharing).
+Download the `data`-folder and place it in the `content`-directory!
+
 ### Toy Dataset - 1D
 #### Evidential learning
 
