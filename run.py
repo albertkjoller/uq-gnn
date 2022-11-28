@@ -38,6 +38,12 @@ def get_arguments(parser):
         default=3.0,
     )
     parser.add_argument(
+        "--N_points",
+        type=int,
+        help="Number of points for TOY1D dataset.",
+        default=1024
+    )
+    parser.add_argument(
         "--batch_size",
         type=int,
         help="Batch size to be used.",

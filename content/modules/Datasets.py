@@ -63,65 +63,94 @@ class ToyDataset1D:
         plt.xlim([-6.5, 6.5])
         plt.show()
 
-    def plot_regression_line(self, model: torch.nn.Module, epoch: int, uncertainty_type: str, save_path=None, show=True):
+    def plot_regression_line(self, model: torch.nn.Module, epoch: int, uncertainty_types: list, save_path=None, show=True):
+        plt.style.use('ggplot')
 
         # Predict on the data range
         toy_ = torch.arange(-6, 6, 12 / (4 * self.N)).reshape(-1, 1).to(self.device)
         outputs = gamma = model(toy_)
 
-        if 'Evidential' in model.__class__.__name__:
-            # Get evidential parameters
-            gamma, v, alpha, beta = torch.tensor_split(outputs, 4, axis=1)
-
         # Reformat tensors
         xaxis = toy_.detach().flatten().cpu().numpy()
         y_true = (toy_ ** 3).detach().flatten().cpu().numpy()
+
+        # Get evidential parameters
+        if 'Evidential' in model.__class__.__name__:
+            gamma, nu, alpha, beta = torch.tensor_split(outputs, 4, axis=1)
+
+            fig, ax = plt.subplots(2, 2, sharex=True)
+            ax[0, 0].plot(xaxis, gamma.cpu())
+            ax[0, 0].set_title(r'$\gamma$')
+            ax[0, 1].plot(xaxis, nu.cpu())
+            ax[0, 1].set_title(r'$\nu$')
+            ax[1, 0].plot(xaxis, alpha.cpu())
+            ax[1, 0].set_title(r'$\alpha$')
+            ax[1, 1].plot(xaxis, beta.cpu())
+            ax[1, 1].set_title(r'$\beta$')
+            ax[0, 0].set_xticks(np.arange(-6, 7, 2), np.arange(-6, 7, 2))
+            fig.suptitle(f"EPOCH {epoch}")
+            fig.suptitle(f"PARAMETERS (EPOCH = {epoch})", fontsize=20, weight='bold')
+            os.makedirs(save_path / 'PARAMS', exist_ok=True)
+            plt.savefig(save_path/f"PARAMS/{epoch}.png")
+            if show == True:
+                fig.show()
+            plt.close("all")
+
+        # Determine predicted output
         y_pred = gamma.detach().flatten().cpu().numpy()
-
-        if uncertainty_type == 'aleatoric':
-            uncertainty = (beta / (alpha - 1)).detach().flatten().cpu().numpy()
-        elif uncertainty_type == 'epistemic':
-            uncertainty = (beta / (v * (alpha - 1))).detach().flatten().cpu().numpy()
-        else:
-            uncertainty = np.ones(xaxis.__len__())
-
         # Gather information in dataframe for plotting
         results = pd.DataFrame({'xaxis': xaxis,
                                 'y_true': y_true,
-                                'y_pred': y_pred,
-                                f'{uncertainty_type}': uncertainty,
-                                })
+                                'y_pred': y_pred,})
 
-        # Print uncertainty estimates
-        print(f"\n{uncertainty_type.upper()} (-4, 4): {np.round(results[np.logical_and(results['xaxis'] > -4, results['xaxis'] < 4)][uncertainty_type].sum(), 2)}")
-        print(f"{uncertainty_type.upper()} ]-4, 4[: {np.round(results[np.logical_or(results['xaxis'] < -4, results['xaxis'] > 4)][uncertainty_type].sum(), 2)}")
+        for uncertainty_type in uncertainty_types:
+            os.makedirs(save_path / uncertainty_type.upper(), exist_ok=True)
 
-        # Replace inf for visualization purposes
-        results[uncertainty_type].replace(np.inf, 1e6, inplace=True)
+            if uncertainty_type == 'aleatoric':
+                uncertainty = (beta / (alpha - 1)).detach().flatten().cpu().numpy()
+            elif uncertainty_type == 'epistemic':
+                uncertainty = (beta / (nu * (alpha - 1))).detach().flatten().cpu().numpy()
+            else:
+                uncertainty = np.ones(xaxis.__len__())
 
-        # Plot regression line and data points
-        plt.figure(dpi=250)
-        plt.plot(self.unbatched_data['data'].detach().flatten().cpu(), self.unbatched_data['target'].detach().flatten().cpu(), 'ko', markersize=0.5)
-        plt.plot(results['xaxis'], results['y_true'], '--r')
-        plt.plot(results['xaxis'], results['y_pred'])
+            results[f'{uncertainty_type}'] = uncertainty
 
-        plt.vlines(-4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
-        plt.vlines(4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
-        plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6, -4, alpha=.3, interpolate=True, color='gray')
-        plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6, alpha=.3, interpolate=True, color='gray')
+            # Print uncertainty estimates (mainly for debugging...)
+            # print(f"\n{uncertainty_type.upper()} (-4, 4): {np.round(results[np.logical_and(results['xaxis'] > -4, results['xaxis'] < 4)][uncertainty_type].sum(), 2)}")
+            # print(f"{uncertainty_type.upper()} ]-4, 4[: {np.round(results[np.logical_or(results['xaxis'] < -4, results['xaxis'] > 4)][uncertainty_type].sum(), 2)}")
 
-        plt.fill_between(results['xaxis'], results['y_pred'] - 0.99 * results[uncertainty_type], results['y_pred'] + 0.99 * results[uncertainty_type], alpha=.2, interpolate=True, color='C0')  # step='post')
-        plt.fill_between(results['xaxis'], results['y_pred'] - 0.95 * results[uncertainty_type], results['y_pred'] + 0.95 * results[uncertainty_type], alpha=.2, interpolate=True, color='C0')  # step='post')
-        plt.fill_between(results['xaxis'], results['y_pred'] - 0.68 * results[uncertainty_type],  results['y_pred'] + 0.68 * results[uncertainty_type], alpha=.2, interpolate=True, color='C0')  # step='post')
+            # Replace inf for visualization purposes
+            results[uncertainty_type].replace(np.inf, 1e6, inplace=True)
 
-        plt.xlim([-6.5, 6.5])
-        plt.ylim([-150, 150])
-        plt.title(f"EPOCH = {epoch}", fontsize=20, weight='bold')
+            # Plot regression line and data points
+            plt.figure(dpi=250)
+            plt.plot(self.unbatched_data['data'].detach().flatten().cpu(), self.unbatched_data['target'].detach().flatten().cpu(), 'ko', markersize=0.5)
+            plt.plot(results['xaxis'], results['y_true'], '--r')
+            plt.plot(results['xaxis'], results['y_pred'], color='blue')
 
-        if save_path != None:
-            plt.savefig(save_path/f"{epoch}.png")
-        if show == True:
-            plt.show(block=False)
+            plt.vlines(-4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
+            plt.vlines(4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
+            plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6.5, -4, alpha=.3, interpolate=True, color='gray')
+            plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6.5, alpha=.3, interpolate=True, color='gray')
+
+            plt.fill_between(results['xaxis'], results['y_pred'] - 0.99 * results[uncertainty_type], results['y_pred'] + 0.99 * results[uncertainty_type], alpha=.2, interpolate=True, color='blue')  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 0.95 * results[uncertainty_type], results['y_pred'] + 0.95 * results[uncertainty_type], alpha=.2, interpolate=True, color='blue')  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 0.68 * results[uncertainty_type],  results['y_pred'] + 0.68 * results[uncertainty_type], alpha=.2, interpolate=True, color='blue')  # step='post')
+
+            plt.xlim([-6.5, 6.5])
+            plt.ylim([-150, 150])
+            plt.title(f"{uncertainty_type.upper()} (EPOCH = {epoch})", fontsize=20, weight='bold')
+
+            if save_path != None:
+                plt.savefig(save_path / f"{uncertainty_type}/{epoch}.png")
+            if show == True:
+                plt.show(block=False)
+                plt.close("all")
+
+        if 'aleatoric' in uncertainty_types and 'epistemic' in uncertainty_types:
+            os.makedirs(save_path / "COMBINED_UNCERTAINTIES", exist_ok=True)
+            results.plot(x='xaxis', y=['aleatoric', 'epistemic'])
+            plt.savefig(save_path / f"COMBINED_UNCERTAINTIES/{epoch}.png")
             plt.close("all")
 
 class GraphDataset():
