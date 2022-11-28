@@ -81,8 +81,7 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
         if 'Evidential' in model.__class__.__name__:
             data.plot_regression_line(model, epoch=epoch, uncertainty_types=['aleatoric', 'epistemic'], save_path=save_path, show=False)
         else:
-            os.makedirs(save_path / 'baseline', exist_ok=True)
-            data.plot_regression_line(model, epoch, uncertainty_type='baseline', save_path=save_path / 'baseline', show=False)
+            data.plot_regression_line(model, epoch=epoch, uncertainty_types=['baseline'], save_path=save_path / 'baseline', show=False)
 
         loss = 0
 

@@ -39,7 +39,7 @@ arguments below. We use 625 epochs which equals 5000 iterations as they argue, a
 arguments:*
 
 ```
-python run.py --mode train --data_dir content/data --dataset TOY1D --batch_size 128 \
+python run.py --mode train --data_dir content/data --dataset TOY1D --batch_size 128 --N_points 1024 \
               --model TOY1D --epochs 625 --lr 5e-3 --loss_function NIG --NIG_lambda 0.01 \
               --val_every_step 50 --tensorboard_logdir logs --experiment_name REPRODUCTION \
               --save_path models --seed 0 --device cuda

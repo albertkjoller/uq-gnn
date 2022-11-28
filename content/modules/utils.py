@@ -77,7 +77,7 @@ def get_model_specifications(args):
         # LOSS
         if args.loss_function == 'RMSE':
             loss_function = RMSELoss()
-        elif args.loss_function == 'GAUSSIANNLLLoss':
+        elif args.loss_function == 'GAUSSIANNLL':
             loss_function = GAUSSIANNLLLoss()
         elif args.loss_function == 'NIG':
             assert args.NIG_lambda != None, "Specify NIG_lambda for using the NIG loss function..."

@@ -93,12 +93,13 @@ class ToyDataset1D:
         else:
             gamma, sigma = torch.tensor_split(outputs, 2, axis=1)
 
-            fig, ax = plt.subplots(1, 2, sharex=True)
+            fig, ax = plt.subplots(1, 2, sharex=True, figsize=(12, 8))
             ax[0].plot(xaxis, gamma.cpu())
-            ax[0].set_title(r'$\gamma$')
+            ax[0].set_title(r'$\mu$')
             ax[1].plot(xaxis, sigma.cpu())
-            ax[1].set_title(r'$\nu$')
-            ax[0, 0].set_xticks(np.arange(-6, 7, 2), np.arange(-6, 7, 2))
+            ax[1].set_title(r'$\sigma$')
+            ax[0].set_xticks(np.arange(-6, 7, 2), np.arange(-6, 7, 2))
+
 
         fig.suptitle(f"EPOCH {epoch}")
         fig.suptitle(f"PARAMETERS (EPOCH = {epoch})", fontsize=20, weight='bold')
@@ -120,46 +121,44 @@ class ToyDataset1D:
             os.makedirs(save_path / uncertainty_type.upper(), exist_ok=True)
 
             # Print uncertainty estimates
-            if 'Evidential' in model.__class__.__name__:
+            if uncertainty_type == 'aleatoric':
+                uncertainty = (beta / (alpha - 1)).detach().flatten().cpu().numpy()
+            elif uncertainty_type == 'epistemic':
+                uncertainty = (beta / (nu * (alpha - 1))).detach().flatten().cpu().numpy()
+            else:
+                uncertainty = sigma.detach().flatten().cpu().numpy()
 
-                if uncertainty_type == 'aleatoric':
-                    uncertainty = (beta / (alpha - 1)).detach().flatten().cpu().numpy()
-                elif uncertainty_type == 'epistemic':
-                    uncertainty = (beta / (nu * (alpha - 1))).detach().flatten().cpu().numpy()
-                else:
-                    uncertainty = sigma.detach().flatten().cpu().numpy()
+            results[f'{uncertainty_type}'] = uncertainty                        # Store uncertainty
+            results[uncertainty_type].replace(np.inf, 1e6, inplace=True)        # Replace inf for visualization purposes
 
-                results[f'{uncertainty_type}'] = uncertainty                        # Store uncertainty
-                results[uncertainty_type].replace(np.inf, 1e6, inplace=True)        # Replace inf for visualization purposes
+            # Print uncertainty estimates (mainly for debugging...)
+            # print(f"\n{uncertainty_type.upper()} (-4, 4): {np.round(results[np.logical_and(results['xaxis'] > -4, results['xaxis'] < 4)][uncertainty_type].sum(), 2)}")
+            # print(f"{uncertainty_type.upper()} ]-4, 4[: {np.round(results[np.logical_or(results['xaxis'] < -4, results['xaxis'] > 4)][uncertainty_type].sum(), 2)}")
 
-                # Print uncertainty estimates (mainly for debugging...)
-                # print(f"\n{uncertainty_type.upper()} (-4, 4): {np.round(results[np.logical_and(results['xaxis'] > -4, results['xaxis'] < 4)][uncertainty_type].sum(), 2)}")
-                # print(f"{uncertainty_type.upper()} ]-4, 4[: {np.round(results[np.logical_or(results['xaxis'] < -4, results['xaxis'] > 4)][uncertainty_type].sum(), 2)}")
+            # Plot regression line and data points
+            plt.figure(dpi=250)
+            plt.plot(self.unbatched_data['data'].detach().flatten().cpu(), self.unbatched_data['target'].detach().flatten().cpu(), 'ko', markersize=0.5)
+            plt.plot(results['xaxis'], results['y_true'], '--r')
+            plt.plot(results['xaxis'], results['y_pred'], color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])
 
-                # Plot regression line and data points
-                plt.figure(dpi=250)
-                plt.plot(self.unbatched_data['data'].detach().flatten().cpu(), self.unbatched_data['target'].detach().flatten().cpu(), 'ko', markersize=0.5)
-                plt.plot(results['xaxis'], results['y_true'], '--r')
-                plt.plot(results['xaxis'], results['y_pred'], color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])
+            plt.vlines(-4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
+            plt.vlines(4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
+            plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6.5, -4, alpha=.3, interpolate=True, color='gray')
+            plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6.5, alpha=.3, interpolate=True, color='gray')
 
-                plt.vlines(-4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
-                plt.vlines(4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
-                plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6.5, -4, alpha=.3, interpolate=True, color='gray')
-                plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6.5, alpha=.3, interpolate=True, color='gray')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 0.99 * results[uncertainty_type], results['y_pred'] + 0.99 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 0.95 * results[uncertainty_type], results['y_pred'] + 0.95 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 0.68 * results[uncertainty_type],  results['y_pred'] + 0.68 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
 
-                plt.fill_between(results['xaxis'], results['y_pred'] - 0.99 * results[uncertainty_type], results['y_pred'] + 0.99 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
-                plt.fill_between(results['xaxis'], results['y_pred'] - 0.95 * results[uncertainty_type], results['y_pred'] + 0.95 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
-                plt.fill_between(results['xaxis'], results['y_pred'] - 0.68 * results[uncertainty_type],  results['y_pred'] + 0.68 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.xlim([-6.5, 6.5])
+            plt.ylim([-150, 150])
+            plt.title(f"{uncertainty_type.upper()} (EPOCH = {epoch})", fontsize=20, weight='bold')
 
-                plt.xlim([-6.5, 6.5])
-                plt.ylim([-150, 150])
-                plt.title(f"{uncertainty_type.upper()} (EPOCH = {epoch})", fontsize=20, weight='bold')
-
-                if save_path != None:
-                    plt.savefig(save_path / f"{uncertainty_type}/0{epoch}.png")
-                if show == True:
-                    plt.show(block=False)
-                    plt.close("all")
+            if save_path != None:
+                plt.savefig(save_path / f"{uncertainty_type}/0{epoch}.png")
+            if show == True:
+                plt.show(block=False)
+                plt.close("all")
 
 
         if 'aleatoric' in uncertainty_types and 'epistemic' in uncertainty_types and show==True:
