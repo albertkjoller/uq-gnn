@@ -72,16 +72,19 @@ def get_model_specifications(args):
     else:
         raise NotImplementedError("Specified model is currently not implemented.")
 
-    # LOSS
-    if args.loss_function == 'RMSE':
-        loss_function = RMSELoss()
-    elif args.loss_function == 'NIG':
-        assert args.NIG_lambda != None, "Specify NIG_lambda for using the NIG loss function..."
-        loss_function = NIGLoss(lambd_=args.NIG_lambda)
+    if args.mode == 'train':
+        # LOSS
+        if args.loss_function == 'RMSE':
+            loss_function = RMSELoss()
+        elif args.loss_function == 'NIG':
+            assert args.NIG_lambda != None, "Specify NIG_lambda for using the NIG loss function..."
+            loss_function = NIGLoss(lambd_=args.NIG_lambda)
+        else:
+            raise NotImplementedError("Specified loss function is currently not implemented.")
+
+        # OPTIMIZER
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+
+        return model.to(torch.device(args.device)), loss_function, optimizer
     else:
-        raise NotImplementedError("Specified loss function is currently not implemented.")
-
-    # OPTIMIZER
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-
-    return model.to(torch.device(args.device)), loss_function, optimizer
+        return model.to(torch.device('cpu')), None, None

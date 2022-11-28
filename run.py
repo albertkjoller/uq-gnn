@@ -1,4 +1,5 @@
 
+import os
 import torch
 import argparse
 
@@ -93,6 +94,12 @@ def get_arguments(parser):
         help="Device to run computations on. Either 'cpu' or 'cuda'.",
         default='cpu',
     )
+    parser.add_argument(
+        "--save_path",
+        type=str,
+        help="Path to saving models.",
+        default=''
+    )
 
 def check_assertions(args):
     # Mode
@@ -115,6 +122,16 @@ def determine_run_version(args):
     version_ += f"_seed.{args.seed}"
 
     return version_
+
+def save_model(model, args):
+    os.makedirs(args.save_path + f"/{args.experiment_name}")
+    torch.save(model.state_dict(), f"{args.save_path}/{args.experiment_name}/final.pth")
+
+def load_model(args):
+    model, _, _ = get_model_specifications(args)
+    state_dict = torch.load(f"{args.save_path}/{args.experiment_name}/final.pth")
+    model.load_state_dict(state_dict)
+    model.eval()
 
 if __name__ == '__main__':
 
@@ -145,8 +162,12 @@ if __name__ == '__main__':
               tensorboard_filename=determine_run_version(args),
               )
 
-    # TODO: add argument for saving model... (state_dict)
+        if args.save_path != '':
+            save_model(model, args)
 
 
-    elif args.mode == 'test':
-        raise NotImplementedError("Evaluation run currently not implemented...")
+    elif args.mode == 'evaluation':
+        # Load model
+        model = load_model(args)
+
+        raise NotImplementedError("Evaluation run currently not fully implemented...")

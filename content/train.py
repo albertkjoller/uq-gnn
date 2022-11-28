@@ -48,6 +48,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
                         batch_xtra_losses[name] += [loss_.item()]
 
             # Store training losses
+            train_lss[epoch] = np.mean(batch_loss)
             writer.add_scalar(f'TRAIN/{loss_name}', np.mean(batch_loss), epoch)
             if loss_function.__class__.__name__ == "NIGLoss":
                 for name, loss_ in batch_xtra_losses.items():
@@ -80,8 +81,8 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
             os.makedirs(save_path / 'epistemic', exist_ok=True)
             os.makedirs(save_path / 'aleatoric', exist_ok=True)
 
-            data.plot_regression_line(model, epoch=epoch, uncertainty_type='epistemic', save_path=save_path / 'epistemic', show=False)
-            data.plot_regression_line(model, epoch=epoch, uncertainty_type='aleatoric', save_path=save_path / 'aleatoric', show=False)
+            data.plot_regression_line(model, epoch=epoch, uncertainty_type='epistemic', save_path=save_path / 'epistemic', show=True)
+            data.plot_regression_line(model, epoch=epoch, uncertainty_type='aleatoric', save_path=save_path / 'aleatoric', show=True)
         else:
             os.makedirs(save_path / 'baseline', exist_ok=True)
             data.plot_regression_line(model, epoch, uncertainty_type='baseline', save_path=save_path / 'baseline', show=False)

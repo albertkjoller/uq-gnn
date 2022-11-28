@@ -26,14 +26,15 @@ A few examples are provided for training models:
 ### Toy Dataset - 1D
 #### Evidential learning
 
-***OBS***: *For reproducing [Amini et al.](https://arxiv.org/pdf/1910.02600.pdf), run with these
+***OBS***: *For reproducing [Amini et al.](https://arxiv.org/pdf/1910.02600.pdf), run with the 
+arguments below. We use 625 epochs which equals 5000 iterations as they argue, as --> iterations / (observations / observations pr. iteration), i.e. 5000 / (1024 / 128) 
 arguments:*
 
 ```
 python run.py --mode train --data_dir content/data --dataset TOY1D --batch_size 128 \
-              --model TOY1D --epochs 5000 --lr 5e-3 --loss_function NIG --NIG_lambda 0.01 \
+              --model TOY1D --epochs 625 --lr 5e-3 --loss_function NIG --NIG_lambda 0.01 \
               --val_every_step 50 --tensorboard_logdir logs --experiment_name REPRODUCTION \
-              --seed 0 --device cuda
+              --save_path models --seed 0 --device cuda
 ```
 
 
@@ -43,7 +44,7 @@ python run.py --mode train --data_dir content/data --dataset TOY1D --batch_size 
 python run.py --mode train --data_dir content/data --dataset TOY1D --batch_size 128 \
               --model BASE1D --epochs 5000 --lr 0.1 --loss_function RMSE \
               --val_every_step 5 --tensorboard_logdir logs --experiment_name BASELINE \
-              --seed 0 --devie cuda
+              --save_path models --seed 0 --devie cuda
 ```
 
 ### Molecular Graph Datasets - 3D
@@ -59,4 +60,11 @@ python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 64
 
 ### Evaluating models
 
-*OBS! Currently not supported...*
+
+*OBS! Currently not fully supported...*
+
+```
+python run.py --mode evaluation --data_dir content/data --dataset TOY1D --batch_size 128 \
+              --model TOY1D --experiment_name REPRODUCTION \
+              --save_path models --seed 0
+```
