@@ -1,4 +1,4 @@
-# CONCEPTUAL
+### CONCEPTUAL ###
 # Evaluation:
 1) Compare aleatoric uncertainty estimates, i.e. NLL, (and predictive performance, i.e. RMSE) to a baseline model (Gaussian MLE) 
 	that validly should be able to capture aleatoric uncertainty (within data).
@@ -10,28 +10,19 @@
 	2.3)  Stratified analysis where we investigate uncertainty on points that the model can accurately model 
 		compared to points where the model predictions are deviating from the true target.
 
-# Experiments
-- Debug to plot to investigate why there is no aleatoric uncertainty???
-1) What happens when we increase lambda much?
-2) What happens when we decrease lambda much?
-3) What happens when we increase the noise of the data much? (aleatoric)
-4) What happens when we derease the noise of the data much? (aleatoric?)
-
-
 
 ### IMPLEMENTATION ###
-# Training loop
-1) Add MSE to Tensorboard (alredy computed as train_acc and val_acc) (maybe RMSE?)
-2) Save model
-
-# Overview
-1) Add arguments and functionalities for running in evaluation mode...
-
 # Figures
 1) Calibration plots
 2) Other ways to visualize learning uncertainties
 3) NIG distribution visualization (as in the paper).
 
-# BASELINE
-1) How do we implement a Gaussian MLE?
 
+
+
+### Minor experiments ###
+- Debug to plot to investigate why there is no aleatoric uncertainty???
+1) What happens when we increase lambda much?
+2) What happens when we decrease lambda much?
+3) What happens when we increase the noise of the data much? (aleatoric)
+4) What happens when we derease the noise of the data much? (aleatoric?)

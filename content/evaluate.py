@@ -136,9 +136,9 @@ def evaluate_model(loader, model, exp):
 
 if __name__ == '__main__':
 
-    experiment_name = 'REPRODUCTION_debug'
+    experiment_name = 'BASELINE_debug/baseline'
 
     # when running with args
-    make_gif(f"../results/{experiment_name}/ALEATORIC", 'aleatoric.gif', duration=100)
-    make_gif(f"../results/{experiment_name}/EPISTEMIC", 'epistemic.gif', duration=100)
+    make_gif(f"../results/{experiment_name}/BASELINE", 'baseline.gif', duration=100)
+    #make_gif(f"../results/{experiment_name}/EPISTEMIC", 'epistemic.gif', duration=100)
     make_gif(f"../results/{experiment_name}/PARAMS", 'parameters.gif', duration=100)
