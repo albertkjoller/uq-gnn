@@ -18,6 +18,8 @@
 3) NIG distribution visualization (as in the paper).
 
 
+### NOTEBOOK ###
+1) NIG distribution - why use a "max_sigma_squared"?
 
 
 ### Minor experiments ###
