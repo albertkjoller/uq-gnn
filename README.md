@@ -44,34 +44,42 @@ Download the `data`-folder and place it in the `content`-directory!
 #### Evidential learning
 
 ***OBS***: *For reproducing [Amini et al.](https://arxiv.org/pdf/1910.02600.pdf), run with the 
-arguments below. We use 625 epochs which equals 5000 iterations as they argue, as --> iterations / (observations / observations pr. iteration), i.e. 5000 / (1024 / 128) 
-arguments:*
+arguments below. We use 625 epochs which equals 5000 iterations as they argue, as --> iterations / (observations / observations pr. iteration), i.e. 5000 / (1024 / 128) = 625 epochs.*
 
 ```
 python run.py --mode train --data_dir content/data --dataset TOY1D --batch_size 128 --N_points 1024 \
               --model TOY1D --epochs 625 --lr 5e-3 --loss_function NIG --NIG_lambda 0.01 \
-              --val_every_step 50 --tensorboard_logdir logs --experiment_name REPRODUCTION \
+              --val_every_step 10 --tensorboard_logdir logs --experiment_name REPRODUCTION_TOY \
               --save_path models --seed 0 --device cuda
 ```
 
 
-#### Simple Baseline (Work-In-Progress...)
+#### Gaussian MLE (baseline)
 
 ```
-python run.py --mode train --data_dir content/data --dataset TOY1D --batch_size 128 \
-              --model BASE1D --epochs 5000 --lr 0.1 --loss_function RMSE \
-              --val_every_step 5 --tensorboard_logdir logs --experiment_name BASELINE \
-              --save_path models --seed 0 --devie cuda
+python run.py --mode train --data_dir content/data --dataset TOY1D --batch_size 128 --N_points 1024 \
+              --model BASE1D --epochs 625 --lr 5e-3 --loss_function GAUSSIANNLL \
+              --val_every_step 10 --tensorboard_logdir logs --experiment_name BASELINE_TOY \
+              --save_path models --seed 0 --device cuda
 ```
 
 ### Molecular Graph Datasets - 3D
-#### QM7 dataset - evidential learning
+#### Evidential learning - QM7 Dataset
 
 ```
-python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 64 \
-              --model GNN3D --epochs 500 --lr 0.001 --loss_function NIG --NIG_lambda 0.0 \
-              --val_every_step 25 --tensorboard_logdir logs --experiment_name test \
-              --seed 42 --device cuda
+python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 128 \
+              --model GNN3D --epochs 1000 --lr 5e-3 --loss_function NIG --NIG_lambda 0.01 \
+              --val_every_step 25 --tensorboard_logdir logs --experiment_name EVIDENTIAL_QM7 \
+              --seed 0 --device cuda
+```
+
+#### Gaussian MLE (baseline)
+
+```
+python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 128 \
+              --model BASE3D --epochs 1000 --lr 5e-3 --loss_function GAUSSIANNLL \
+              --val_every_step 25 --tensorboard_logdir logs --experiment_name BASELINE_QM7 \
+              --save_path models --seed 0 --device cuda
 ```
 
 
