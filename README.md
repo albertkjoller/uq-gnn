@@ -1,12 +1,20 @@
 # Uncertainty Quantification for Graph Neural Networks
 
-02456 - Deep Learning (Fall 2022) @ Technical University of Denmark
+**02456 - Deep Learning (Fall 2022) @ Technical University of Denmark**
+
+This project examines uncertainty quantification in graph neural networks by approaching the concept of 
+*Evidential Learning*. The main components of this repository are:
+
+- [Notebook containing descriptions for reproducibility of the associated project report.](https://nbviewer.org/github/albertkjoller/uq-gnn/blob/main/explainer.ipynb#2)
+- Code structure for experimenting with training models (see *Training models* section below)
+
+
+#### Example - Evidential Learning
+
 Epistemic              |  Aleatoric              |  Parameters
 :-------------------------:|:-------------------------:|:-------------------------:|
 ![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif)  |  ![aleatoric_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/aleatoric.gif)  |  ![parameters_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/parameters.gif)
 
-
-<!--- ![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif) --->
 
 ### Setup 
 
