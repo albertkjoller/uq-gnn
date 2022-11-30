@@ -38,10 +38,14 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
                     # Evaluate on validation batch
                     val_loss = evaluate(model, val_loader, writer, epoch, loss_function, experiment_name)
 
+                    # Save best model on validation set
                     if val_loss <= current_best:
                         current_best = val_loss
+                        best_epoch = epoch
                         torch.save(model.state_dict(), f"{save_path}/best.ckpt")
-                        info_str = (f"\nEPOCH {epoch} --> BEST CHECKPOINT SAVED!")
+                        info_str = f"\nEPOCH {epoch} --> BEST CHECKPOINT SAVED!"
+                        info_str += f"\t Validation Loss: {current_best}"
+
                     val_lss[val_step] = np.mean(val_loss)
                     # Switch back to training mode
                     model.train()
@@ -79,6 +83,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
     # Close tensorboard
     writer.close()
     print(info_str)
+    return model, best_epoch
 
 def evaluate(model, data, writer, epoch, loss_function, experiment_name):
 

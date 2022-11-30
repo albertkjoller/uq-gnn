@@ -177,15 +177,15 @@ if __name__ == '__main__':
         model, loss_function, optimizer = get_model_specifications(args)
 
         # Run training loop
-        train(loaders, model, optimizer,
-              loss_function=loss_function,
-              epochs=args.epochs,
-              val_every_step=args.val_every_step,
-              experiment_name=args.experiment_name,
-              tensorboard_logdir=args.tensorboard_logdir,
-              tensorboard_filename=determine_run_version(args),
-              save_path=f"{args.save_path}/{args.experiment_name}",
-              )
+        model, best_epoch = train(loaders, model, optimizer,
+                                  loss_function=loss_function,
+                                  epochs=args.epochs,
+                                  val_every_step=args.val_every_step,
+                                  experiment_name=args.experiment_name,
+                                  tensorboard_logdir=args.tensorboard_logdir,
+                                  tensorboard_filename=determine_run_version(args),
+                                  save_path=f"{args.save_path}/{args.experiment_name}",
+                                  )
 
         if args.save_path != '':
             save_model(model, args)
