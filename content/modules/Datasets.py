@@ -55,12 +55,19 @@ class ToyDataset1D:
         self.data['data'] = torch.FloatTensor(self.N).uniform_(self.range_[0], self.range_[1])[order_].reshape(-1, self.B, 1).to(self.device)
         self.data['target'] = self.data['data'] ** 3 + (torch.randn(self.N, 1).reshape(-1, self.B, 1) * self.noise_level).to(self.device)
 
-    def visualize_dataset(self, figsize=(12, 8)):
+    def visualize_dataset(self, ):
         # plot data
-        plt.figure(figsize=figsize)
-        plt.plot(self.data['data'].detach().flatten().cpu(), self.data['target'].detach().flatten().cpu(), 'k.')
-        plt.plot(torch.arange(-4, 4, 8 / self.N), torch.arange(-4, 4, 8 / self.N) ** 3, 'r--')
+        plt.figure()
+        plt.plot(self.unbatched_data['data'].detach().flatten().cpu(), self.unbatched_data['target'].detach().flatten().cpu(), 'ko', markersize=0.5)
+        plt.plot(torch.arange(-6, 6, 12 / self.N), torch.arange(-6, 6, 12 / self.N) ** 3, 'r--')
+
+        plt.vlines(-4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
+        plt.vlines(4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
+        plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6.5, -4, alpha=.3, interpolate=True, color='gray')
+        plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6.5, alpha=.3, interpolate=True, color='gray')
+
         plt.xlim([-6.5, 6.5])
+        plt.ylim([-150, 150])
         plt.show()
 
     #TODO: CLEAN UP IN THIS FUNCTION!

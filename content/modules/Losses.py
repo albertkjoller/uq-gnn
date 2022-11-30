@@ -1,11 +1,23 @@
 
 import torch
 from torch.nn import GaussianNLLLoss
+
 class NIGLoss:
     def __init__(self, lambd_) -> None:
         self.lambd_ = lambd_
 
     def __call__(self, evidential_params_, y):
+        """
+
+        Parameters
+        ----------
+        evidential_params_
+        y
+
+        Returns
+        -------
+
+        """
         self.gamma, self.nu, self.alpha, self.beta = evidential_params_[:, 0].reshape(-1, 1), \
                                                     evidential_params_[:, 1].reshape(-1, 1), \
                                                     evidential_params_[:, 2].reshape(-1, 1), \
