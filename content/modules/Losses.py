@@ -56,7 +56,6 @@ class NIGLoss:
 
 
 class RMSELoss:
-
     def __init__(self, ) -> None:
         pass
 
@@ -68,16 +67,16 @@ class RMSELoss:
         # Compute total loss
         return ('RMSE', torch.sqrt(mse_loss.mean())), {}
 
-class GAUSSIANNLLLoss:
 
+class GAUSSIANNLLLoss:
     def __init__(self, ) -> None:
         pass
 
     def __call__(self, theta, y):
         self.mu = theta[:,0].reshape(-1,1)
         self.sigma = theta[:, 1].reshape(-1, 1)
+
+        # Compute loss
         loss = GaussianNLLLoss()
-        # Get losses
-        mse_loss = loss(input=self.mu, target=y, var=self.sigma)
-        # Compute total loss
-        return ('GAUSSIANNLL', torch.sqrt(mse_loss.mean())), {}
+        nll_loss = loss(input=self.mu, target=y, var=self.sigma)
+        return ('GAUSSIANNLL', torch.sqrt(nll_loss.mean())), {}

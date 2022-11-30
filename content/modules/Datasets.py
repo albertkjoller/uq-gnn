@@ -70,7 +70,6 @@ class ToyDataset1D:
         plt.ylim([-150, 150])
         plt.show()
 
-    #TODO: CLEAN UP IN THIS FUNCTION!
     def plot_regression_line(self, model: torch.nn.Module, epoch: int, uncertainty_types: list, save_path=None, show=False):
         plt.style.use('ggplot')
 
