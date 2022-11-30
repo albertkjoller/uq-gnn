@@ -154,18 +154,14 @@ def error_percentile_plot(df_summary, hue_by, hue_by_list):
     # todo save plot
 
 
-def calibration_plot(summary_dict, hue_by, hue_by_list):
+def calibration_plot(df_summary, hue_by, hue_by_list):
     # general dataframe
     df_calibration = pd.DataFrame(columns=[hue_by, "Expected Conf.", "Observed Conf."])
     # from low to high conf
     expected_conf = np.arange(41) / 40.
     for hue in hue_by_list:
         single_df_summary = df_summary[df_summary[hue_by] == hue]
-
-
-
         observed_conf = []
-        df_summary = pd.DataFrame.from_dict(summary)
         for p in expected_conf:
             # point percentage function, the z value given confidence
             # the lower tail
@@ -176,12 +172,11 @@ def calibration_plot(summary_dict, hue_by, hue_by_list):
             obs_c = np.multiply(lower_z < single_df_summary["target"], single_df_summary["target"] < higher_z).mean()
             observed_conf.append(obs_c)
 
-        df_single = pd.DataFrame({hue_by: exp, 'Expected Conf.': expected_conf, 'Observed Conf.': observed_conf})
+        df_single = pd.DataFrame({hue_by: hue, 'Expected Conf.': expected_conf, 'Observed Conf.': observed_conf})
         df_calibration = df_calibration.append(df_single)
 
     # the desired
-    df_truth = pd.DataFrame \
-        ({hue_by: 'Ideal calibration', 'Expected Conf.': expected_conf, 'Observed Conf.': expected_conf})
+    df_truth = pd.DataFrame({hue_by: 'Ideal calibration', 'Expected Conf.': expected_conf, 'Observed Conf.': expected_conf})
     # df_calibration = df_calibration.append(df_truth)
     df_calibration.reset_index(drop=True, inplace=True)
 
@@ -198,27 +193,28 @@ def results_table(summary_dict):
     return None
 
 
-def in_ood_boxplot(summary_dict, hue_by, hue_by_list):
+def in_ood_boxplot(df_summary, hue_by, hue_by_list):
 
     # general dataframe
     df_entropy = pd.DataFrame(columns=[hue_by, 'Entropy', 'ID or ODD'])    # from low to high conf
-    for exp, summary in summary_dict.items():
-        df_single = pd.DataFrame.from_dict \
-            ({hue_by: exp, 'Entropy': summary['Entropy'], 'ID or OOD': summary['ID or OOD']})
+    for hue in hue_by_list:
+        single_df_summary = df_summary[df_summary[hue_by] == hue]
+        df_single = pd.DataFrame.from_dict({hue_by: hue, 'Entropy': single_df_summary['Entropy'], 'ID or OOD': single_df_summary['ID or OOD']})
         df_entropy = df_entropy.append(df_single)
     # add the end to ignore outliers
-    sns.catplot(x=hue_by, y='Entropy', hue="ID or OOD", data=df_entropy, kind="box"  )  # , showfliers=False)
+    sns.catplot(x=hue_by, y='Entropy', hue="ID or OOD", data=df_entropy, kind="box")  # , showfliers=False)
 
-def in_ood_hist(summary_dict, hue_by, hue_by_list):
+def in_ood_hist(df_summary, hue_by, hue_by_list):
 
     # general dataframe
-    df_entropy = pd.DataFrame(columns=[hue_by, 'Entropy', 'ID or ODD'])    # from low to high conf
-    for exp, summary in summary_dict.items():
-        df_single = pd.DataFrame.from_dict({'Entropy': summary['Entropy'], 'ID or OOD': summary['ID or OOD']})
-        df_entropy = df_entropy.append(df_single)
+    #df_entropy = pd.DataFrame(columns=[hue_by, 'Entropy', 'ID or ODD'])    # from low to high conf
+    for hue in hue_by_list:
+        single_df_summary = df_summary[df_summary[hue_by] == hue]
+        df_single = pd.DataFrame.from_dict({'Entropy': single_df_summary['Entropy'], 'ID or OOD': single_df_summary['ID or OOD']})
+        #df_entropy = df_entropy.append(df_single)
         # add the end to ignore outliers
         # sns.catplot(x=hue_by, y='Entropy', hue="ID or OOD", data=df_entropy, kind="box")#, showfliers=False)
-        sns.histplot(x='Entropy', hue="ID or OOD", data=df_single, kind="box", kde = True)
+        sns.histplot(x='Entropy', hue="ID or OOD", data=df_single, kde=True)
         plt.show()
     # sns.histplot(data = penguins, x = "body_mass_g", kde = True, hue = "species")
 
@@ -246,15 +242,15 @@ def evaluate_model(loaders_dict, models, experiments):
     # RMSE as a function of percentile included sigma values
     #   - including sigma's from all, to only highest sigma's (based on %)
     #   - desire constant/inverse trend, no fluctuations between sigma and error
-    error_percentile_plot(df_summary, hue_by, hue_by_list)
+    #error_percentile_plot(df_summary, hue_by, hue_by_list)
 
     # % correct predictions as a function of increasing confidence interval
     #   - we want a linear trend, so estimated confidence matches expected
-    # calibration_plot(summary_dict, hue_by, hue_by_list)
+    #calibration_plot(df_summary, hue_by, hue_by_list)
 
     # entropy of in and out of distribution boxplot
     #   - a difference in entropy between in and out is desired
-    # in_ood_boxplot(summary_dict, hue_by, hue_by_list)
+    #in_ood_boxplot(df_summary, hue_by, hue_by_list)
 
     # histogram of entropy from in and out of distribution data
     in_ood_hist(df_summary, hue_by, hue_by_list)
