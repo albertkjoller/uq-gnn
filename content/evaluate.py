@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 from content.modules.Losses import NIGLoss
+from torch.distributions.normal import Normal
 
 # Found here: https://www.blog.pythonlibrary.org/2021/06/23/creating-an-animated-gif-with-python/
 def make_gif(img_dir, filename, duration=150):
@@ -31,23 +32,36 @@ def evidential_prediction(outputs):
     pred = gamma
     alea = beta/(alpha-1)
     epi = beta/(v*(alpha-1))
-    return pred.flatten().tolist(), alea.flatten().tolist(), epi.flatten().tolist()
+    return pred, alea.flatten().tolist(), epi.flatten().tolist()
 
 
-def get_errors(target, predicted, extra_params = None):
-    # using the sklearn loss functions 
-    # PHIL: MSE, NLL (with and without aleatoric (lambda))
-    # NLL = log_loss(target, predicted)
+def get_performance(summary_dict):
 
-    NIG_NLL, epi_NLL, alea_NLL = None
+    performance_dict = {}
 
-    if extra_params:
-        evidential_params, aleatoric, epistemic = extra_params
-        NIG = NIGLoss(0.0) # Lambda set to 0.0 as only NIG NLL is extracted. 
-        NIG_NLL = NIG(torch.stack(evidential_params), torch.stack(target))[1]['NLL']
+    for exp, summary in summary_dict.items():
 
-    RMSE = mean_squared_error(target, predicted, squared=False)
-    return (RMSE, NIG_NLL)
+        RMSE = mean_squared_error(summary['target'], summary['prediction'], squared=False)
+        exp_dict = {'RMSE': RMSE, 'NLL': {}}
+
+        # If evidential:
+        if summary['Model'] == 'evidential':
+            evidential_params = torch.stack([torch.Tensor(summary[param]) for param in ['gamma', 'v', 'alpha', 'beta']], dim=1)
+
+            NIG = NIGLoss(0.0) # Lambda set to 0.0 as only NIG NLL is extracted. 
+            exp_dict['NLL'] = NIG(evidential_params, torch.stack(summary['target']))[1]['NLL']
+            # exp_dict['NLL']['EPI_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i], scale=summary['epistemic'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
+            # exp_dict['NLL']['ALEA_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i], scale=summary['aleatoric'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
+            # exp_dict['NLL']['COMBINED_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i]*2, scale=summary['epistemic'][i]+summary['aleatoric'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
+
+        if summary['Model'] == 'baseline':
+
+            # NLL based on mu and sigma predictions
+            exp_dict['NLL'] = - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
+
+        performance_dict[exp] = exp_dict
+
+    return performance_dict
 
 
 
@@ -67,29 +81,26 @@ def get_prediction_summary(loader, model, exp):
             aleatoric.extend(alea)
             epistemic.extend(epi)
         
-        else:
-            # todo: implement for gaussian, ensemble etc
+        if model.model_type == 'baseline':
+            # Output matching that of evidential
+            evidential_params.extend(torch.zeros(outputs.shape[0], outputs.shape[1]*2))
+            prediction.extend(outputs[:,0].detach().numpy()) # mu
+            aleatoric.extend(outputs[:,1].detach().numpy()) # var
+            epistemic.extend(outputs[:,1].detach().numpy()) # var
+
+        else: # todo: implement for ensemble etc
             raise NotImplementedError
-
-    # if gaussian: (only one MSE)
-    # if evidential: (one for alea (based on the sigma), one for epi (based on the sigma), one combined (based on both sigmas), finally, NIG loss)
-
-    # todo: get NLL from loss function and add
-    errors = get_errors(target, prediction, extra_params = (evidential_params, aleatoric, epistemic))
-    RMSE, NIG_nll = errors
-
+    
+    evidential_params = torch.stack(evidential_params).detach().numpy()
+    gamma, v, alpha, beta = evidential_params[:,0], evidential_params[:,1], evidential_params[:,2], evidential_params[:,3]
 
     summary = {'Experiment': exp, 'Model': model.model_type,
                'target': target, 'prediction': prediction,
-               'aleatoric': aleatoric, 'epistemic': epistemic,
-               'error': {'RMSE': RMSE}}
-
-    # Expand error dict if evidential
-    if model.model_type == 'evidential':
-        summary['error']['NIG_NLL'] = NIG_nll
+               'aleatoric': aleatoric, 'epistemic': epistemic, 
+               'gamma': prediction, 'v': v, 
+               'alpha': alpha, 'beta': beta}
     
     return summary, model.model_type
-
 
 
 def error_percentile_plot(summary_dict, hue_by):
@@ -182,7 +193,9 @@ def calibration_plot(summary, hue_by):
 
     # todo save plot
 
-def get_results(summary):
+def results_table(summary_dict):
+
+    performance_dict = get_performance(summary_dict)
 
     return None
 
@@ -210,22 +223,34 @@ def evaluate_model(loader, models, experiments):
     # RMSE as a function of percentile included sigma values
     #   - including sigma's from all, to only highest sigma's (based on %)
     #   - desire constant/inverse trend, no fluctuations between sigma and error
-    error_percentile_plot(summary_dict, hue_by)
+    # error_percentile_plot(summary_dict, hue_by)
 
     # % correct predictions as a function of increasing confidence interval
     #   - we want a linear trend, so estimated confidence matches expected
-    calibration_plot(summary_dict, hue_by)
+    # calibration_plot(summary_dict, hue_by)
 
     # entropy of in and out of distribution boxplot
     #   - a difference in entropy between in and out is desired
-    in_odd_boxplot(summary_dict, hue_by)
+    # in_odd_boxplot(summary_dict, hue_by)
 
 
     # RMSE as a function of increasing confidence interval, ignore, don't
     #error_conf_plot(summary)
     #todo: if modeltype uniqu is same, hue_by is experiment name, else model_yupe
 
-    get_results(summary)
+    # 
+    # get_results(summary_dict)
+
+    results_table(summary_dict)
+    stop = 1
+    #RMSE, NIG_nll = errors
+        # Expand error dict if evidential
+    #if model.model_type == 'evidential':
+    #    summary['error']['NIG_NLL'] = NIG_nll
+
+    # Aleatoric NLL -> likelihood tarrget, based on Normal(gamma, aleatoric)
+    # Epistemic NLL -> likelihood tarrget, based on Normal(gamma, Epistemic)
+    # Combined --> target Normal(gamma, aleatoric, epistemic)
 
     # PHIL: Make table func
 
