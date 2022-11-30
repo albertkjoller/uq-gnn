@@ -33,26 +33,29 @@ def evidential_prediction(outputs):
     return pred, alea.flatten().tolist(), epi.flatten().tolist()
 
 
-def get_performance(summary_dict):
+def get_performance(df_summary, experiments):
 
     performance_dict = {}
 
-    for exp, summary in summary_dict.items():
+    for exp in experiments:
+
+        summary = df_summary[df_summary['Experiment'] == exp]
 
         RMSE = mean_squared_error(summary['target'], summary['prediction'], squared=False)
         exp_dict = {'RMSE': RMSE, 'NLL': {}}
 
         # If evidential:
-        if summary['Model'] == 'evidential':
+        if summary['Model'][0] == 'evidential':
+
             evidential_params = torch.stack([torch.Tensor(summary[param]) for param in ['gamma', 'v', 'alpha', 'beta']], dim=1)
 
             NIG = NIGLoss(0.0) # Lambda set to 0.0 as only NIG NLL is extracted.
-            exp_dict['NLL'] = NIG(evidential_params, torch.stack(summary['target']))[1]['NLL']
+            exp_dict['NLL'] = float(NIG(evidential_params, torch.Tensor(summary['target']))[1]['NLL'])
             # exp_dict['NLL']['EPI_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i], scale=summary['epistemic'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
             # exp_dict['NLL']['ALEA_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i], scale=summary['aleatoric'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
             # exp_dict['NLL']['COMBINED_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i]*2, scale=summary['epistemic'][i]+summary['aleatoric'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
 
-        if summary['Model'] == 'baseline':
+        if summary['Model'][0] == 'baseline':
 
             # NLL based on mu and sigma predictions
             exp_dict['NLL'] = - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
@@ -92,7 +95,7 @@ def get_prediction_summary(loaders_dict, model, exp):
                 prediction.extend(outputs[: ,0].detach().numpy()) # mu
                 aleatoric.extend(outputs[: ,1].detach().numpy()) # var
                 epistemic.extend(outputs[: ,1].detach().numpy()) # var
-                entropy.extend((0.5 * np.log(2 * np.pi * np.exp(1.) * (np.array(outputs[: ,1]) ** 2))).tolist())
+                entropy.extend((0.5 * np.log(2 * np.pi * np.exp(1.) * (outputs[: ,1].detach().numpy() ** 2))).tolist())
 
 
             else: # todo: implement for ensemble etc
@@ -186,15 +189,17 @@ def calibration_plot(df_summary, hue_by, hue_by_list):
 
     # todo save plot
 
-def results_table(summary_dict):
+def plot_results(df_summary, experiments):
 
     # Getting performance dictionary (NLL and MSE)
-    performance_dict = get_performance(summary_dict)
-    performance_df = pd.DataFrame.from_dict(performance_dict).T
+    performance_dict = get_performance(df_summary, experiments)
+    performance_df = pd.DataFrame.from_dict(performance_dict)
+
+    performance_df.plot(kind='bar', rot=0.0) # maybe split into RMSE and NLL instead
 
     latex = performance_df.to_latex()
 
-    return None
+    return latex
 
 
 def in_ood_boxplot(df_summary, hue_by, hue_by_list):
@@ -257,10 +262,10 @@ def evaluate_model(loaders_dict, models, experiments):
     #in_ood_boxplot(df_summary, hue_by, hue_by_list)
 
     # histogram of entropy from in and out of distribution data
-    in_ood_hist(df_summary, hue_by, hue_by_list)
+    # in_ood_hist(df_summary, hue_by, hue_by_list)
 
-    results_table(df_summary)
-    stop = 1
+    latex = plot_results(df_summary, experiments)
+
     # RMSE, NIG_nll = errors
     # Expand error dict if evidential
     # if model.model_type == 'evidential':
