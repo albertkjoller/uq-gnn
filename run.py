@@ -2,6 +2,7 @@
 import os
 import torch
 import argparse
+from copy import deepcopy
 
 from content.train import train
 from content.evaluate import evaluate_model
@@ -50,9 +51,14 @@ def get_arguments(parser):
         help="Batch size to be used.",
         default=64,
     )
+    #parser.add_argument(
+    #    "--model",
+    #    type=str,
+    #    help="The model type to use when training. Currently, either 'TOY1D', 'GNN3D', 'BASE1D', or 'BASE3D'."
+    #)
     parser.add_argument(
         "--model",
-        type=str,
+        action='append',
         help="The model type to use when training. Currently, either 'TOY1D', 'GNN3D', 'BASE1D', or 'BASE3D'."
     )
     parser.add_argument(
@@ -89,12 +95,19 @@ def get_arguments(parser):
         help="Path to location for storing tensorboard log-files.",
         default='logs',
     )
+    #parser.add_argument(
+    #    "--experiment_name",
+    #    type=str,
+    #    help="Name of experiment run (identical for train and evaluation mode).",
+    #    required=True,
+    #)
     parser.add_argument(
-        "--experiment_name",
-        type=str,
+        '--experiment_name',
+        action='append',
         help="Name of experiment run (identical for train and evaluation mode).",
         required=True,
     )
+
     parser.add_argument(
         "--device",
         type=str,
@@ -157,6 +170,9 @@ if __name__ == '__main__':
 
     # TRAINING MODE
     if args.mode == 'train':
+        # currently in list (because needed in evaluation)
+        args.experiment_name = args.experiment_name[0]
+        args.model = args.model[0]
         # Get training specific objects
         model, loss_function, optimizer = get_model_specifications(args)
 
@@ -173,13 +189,16 @@ if __name__ == '__main__':
         if args.save_path != '':
             save_model(model, args)
 
-
+    # todo: run and evaluate argument?
     elif args.mode == 'evaluation':
-        # todo: extend for multiple models
         # Load model
-        model = load_model(args)
-        # todo currently using train
-        evaluate_model(loader=loaders['train'], model=model, exp=args.experiment_name)
+        models = {}
+        for idx, exp in enumerate(args.experiment_name):
+            curr_args = deepcopy(args)
+            curr_args.experiment_name, curr_args.model = exp, args.model[idx]
+            models[exp] = load_model(curr_args)
+        # todo currently using train, because toy doesn't have test
+        evaluate_model(loader=loaders['train'], models=models, experiments=args.experiment_name)
         # we want the RMSE, NLL, (inference speed?)
 
         #raise NotImplementedError("Evaluation run currently not fully implemented...")
