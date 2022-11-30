@@ -188,7 +188,11 @@ def calibration_plot(df_summary, hue_by, hue_by_list):
 
 def results_table(summary_dict):
 
+    # Getting performance dictionary (NLL and MSE)
     performance_dict = get_performance(summary_dict)
+    performance_df = pd.DataFrame.from_dict(performance_dict).T
+
+    latex = performance_df.to_latex()
 
     return None
 
