@@ -11,7 +11,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 def train(dataloaders, model, optimizer, loss_function, epochs=1000,
           val_every_step=50, experiment_name=str(time.time()),
-          tensorboard_logdir='logs', tensorboard_filename=str(time.time())):
+          tensorboard_logdir='logs', tensorboard_filename=str(time.time()),
+          save_path=''):
 
     # Setup tensorboard
     writer = SummaryWriter(Path(f"{tensorboard_logdir}")/tensorboard_filename)
@@ -23,13 +24,12 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
     model.train()
 
     # Setup storage information
+    current_best, info_str = np.inf, ""
     train_lss, val_lss = np.zeros(epochs), np.zeros(epochs // val_every_step)
 
     with trange(epochs) as t:
-
         val_step = -1
         for epoch in t:
-
             # VALIDATION
             if epoch % val_every_step == 0:
                 with torch.no_grad():
@@ -37,6 +37,11 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
                     model.eval()
                     # Evaluate on validation batch
                     val_loss = evaluate(model, val_loader, writer, epoch, loss_function, experiment_name)
+
+                    if val_loss <= current_best:
+                        current_best = val_loss
+                        torch.save(model.state_dict(), f"{save_path}/best.ckpt")
+                        info_str = (f"\nEPOCH {epoch} --> BEST CHECKPOINT SAVED!")
                     val_lss[val_step] = np.mean(val_loss)
                     # Switch back to training mode
                     model.train()
@@ -73,6 +78,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
 
     # Close tensorboard
     writer.close()
+    print(info_str)
 
 def evaluate(model, data, writer, epoch, loss_function, experiment_name):
 
@@ -83,9 +89,11 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
         else:
             data.plot_regression_line(model, epoch=epoch, uncertainty_types=['baseline'], save_path=save_path / 'baseline', show=False)
 
-        loss = 0
+        # Use batches for obtaining batched validation loss
+        data = data.batches
+        #loss = 0
 
-    elif model.__class__.__name__ == 'EvidentialGNN3D':
+    if 'Evidential' in model.__class__.__name__:
 
         batch_loss, batch_xtra_losses = [], defaultdict(list)
         for idx_batch, batch in enumerate(data):

@@ -71,7 +71,7 @@ class ToyDataset1D:
         plt.show()
 
     #TODO: CLEAN UP IN THIS FUNCTION!
-    def plot_regression_line(self, model: torch.nn.Module, epoch: int, uncertainty_types: list, save_path=None, show=True):
+    def plot_regression_line(self, model: torch.nn.Module, epoch: int, uncertainty_types: list, save_path=None, show=False):
         plt.style.use('ggplot')
 
         # Predict on the data range
@@ -164,8 +164,9 @@ class ToyDataset1D:
             if save_path != None:
                 plt.savefig(save_path / f"{uncertainty_type}/0{epoch}.png")
             if show == True:
-                plt.show(block=False)
+                #plt.show(block=False)
                 plt.close("all")
+            plt.close("all")
 
 
         if 'aleatoric' in uncertainty_types and 'epistemic' in uncertainty_types and show==True:

@@ -13,7 +13,7 @@ def retrieve_dataset(args):
     device = torch.device(args.device)
     if args.dataset == 'TOY1D':
         return {'train': ToyDataset1D(B=args.batch_size, N=args.N_points, range_=(-4, 4), noise_level=args.toy_noise_level, device=device),
-                'val': ToyDataset1D(B=args.batch_size, N=args.N_points, range_=(-4, 4), noise_level=args.toy_noise_level, device=device)}
+                'val': ToyDataset1D(B=args.batch_size, N=args.N_points, range_=(-6, 6), noise_level=args.toy_noise_level, device=device)}
 
     elif args.dataset == 'QM7':
         return QM7_dataset(path=f"{args.data_dir}/QM7/qm7.mat", device=device)
@@ -41,7 +41,7 @@ def load_data(args):
         dataset = retrieve_dataset(args)
 
         if args.dataset == 'TOY1D':
-            loaders = {'train': dataset['train'].batches, 'val': dataset['val'], 'test': None}
+            loaders = {'train': dataset['train'].batches, 'val': dataset['val'], 'visualization': dataset['train']}
         else:
             print("\nCREATING DATALOADER OBJECTS...")
 

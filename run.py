@@ -144,7 +144,6 @@ def determine_run_version(args):
     return version_
 
 def save_model(model, args):
-    os.makedirs(args.save_path + f"/{args.experiment_name}", exist_ok = True)
     torch.save(model.state_dict(), f"{args.save_path}/{args.experiment_name}/final.pth")
 
 def load_model(args):
@@ -163,6 +162,7 @@ if __name__ == '__main__':
 
     # Check if inconsistence within input arguments
     check_assertions(args)
+    os.makedirs(args.save_path + f"/{args.experiment_name}")
 
     # Load data and device
     loaders = load_data(args)
@@ -184,6 +184,7 @@ if __name__ == '__main__':
               experiment_name=args.experiment_name,
               tensorboard_logdir=args.tensorboard_logdir,
               tensorboard_filename=determine_run_version(args),
+              save_path=f"{args.save_path}/{args.experiment_name}",
               )
 
         if args.save_path != '':
