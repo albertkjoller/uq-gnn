@@ -27,11 +27,16 @@ def get_arguments(parser):
         help="Path to data directory where various datasets are stored.",
         required=True,
     )
+    #parser.add_argument(
+    #    "--dataset",
+    #    type=str,
+    #    help="Name of the dataset to be used. Options: [TOY1D, QM7, SYNTHETIC]",
+    #    required=True,
+    #)
     parser.add_argument(
         "--dataset",
-        type=str,
-        help="Name of the dataset to be used. Options: [TOY1D, QM7, SYNTHETIC]",
-        required=True,
+        action='append',
+        help="Name of the dataset to be used. Options: [TOY1D, QM7, SYNTHETIC]"
     )
     parser.add_argument(
         "--toy_noise_level",
@@ -121,6 +126,12 @@ def get_arguments(parser):
         default=''
     )
 
+    parser.add_argument(
+        '--id_ood',
+        action='append',
+        help="For evaluation only: whether dataset is in or out of distribution.",
+    )
+
 def check_assertions(args):
     # Mode
     assert args.mode in ['train', 'evaluation'], "run.py only support 'train' or 'evaluation' mode"
@@ -162,17 +173,21 @@ if __name__ == '__main__':
 
     # Check if inconsistence within input arguments
     check_assertions(args)
-    os.makedirs(args.save_path + f"/{args.experiment_name}")
-
-    # Load data and device
-    loaders = load_data(args)
-    device = torch.device(args.device)
 
     # TRAINING MODE
     if args.mode == 'train':
         # currently in list (because needed in evaluation)
+        args.dataset = args.dataset[0]
         args.experiment_name = args.experiment_name[0]
         args.model = args.model[0]
+
+        os.makedirs(args.save_path + f"/{args.experiment_name}")
+
+        # Load data and device
+        loaders = load_data(args)
+        device = torch.device(args.device)
+
+
         # Get training specific objects
         model, loss_function, optimizer = get_model_specifications(args)
 
@@ -192,14 +207,25 @@ if __name__ == '__main__':
 
     # todo: run and evaluate argument?
     elif args.mode == 'evaluation':
-        # Load model
         models = {}
+        loaders_dict = {}
+        # getting each model
         for idx, exp in enumerate(args.experiment_name):
             curr_args = deepcopy(args)
             curr_args.experiment_name, curr_args.model = exp, args.model[idx]
+            # model
             models[exp] = load_model(curr_args)
+
+        # getting each dataset loader
+        for idx, data in enumerate(args.dataset):
+            curr_args = deepcopy(args)
+            curr_args.dataset =args.dataset[idx]
+            # dataset
+            loaders_dict[args.id_ood[idx]] = load_data(curr_args)
+
+
         # todo currently using train, because toy doesn't have test
-        evaluate_model(loader=loaders['train'], models=models, experiments=args.experiment_name)
+        evaluate_model(loaders_dict=loaders_dict, models=models, experiments=args.experiment_name)
         # we want the RMSE, NLL, (inference speed?)
 
         #raise NotImplementedError("Evaluation run currently not fully implemented...")

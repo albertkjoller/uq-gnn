@@ -18,7 +18,8 @@ def retrieve_dataset(args):
     elif args.dataset == 'QM7':
         return QM7_dataset(path=f"{args.data_dir}/QM7/qm7.mat", device=device)
     elif args.dataset == 'SYNTHETIC':
-        raise NotImplementedError("TODO: fix path to dataset - what is this?")
+        return synthetic_dataset(path = f"{args.data_dir}/QM7/", device='cpu')
+        #raise NotImplementedError("TODO: fix path to dataset - what is this?")
         #return synthetic_dataset(f"{args.data_dir}/SYNTHETIC/...") # TODO: ME!
 
 def load_data(args):
