@@ -159,18 +159,21 @@ def calibration_plot(summary_dict, hue_by, hue_by_list):
     df_calibration = pd.DataFrame(columns=[hue_by, "Expected Conf.", "Observed Conf."])
     # from low to high conf
     expected_conf = np.arange(41) / 40.
-    # go inverse of expected, start 0 (full z range then decrease it)
-    for exp, summary in summary_dict.items():
+    for hue in hue_by_list:
+        single_df_summary = df_summary[df_summary[hue_by] == hue]
+
+
+
         observed_conf = []
         df_summary = pd.DataFrame.from_dict(summary)
         for p in expected_conf:
             # point percentage function, the z value given confidence
             # the lower tail
-            lower_z = scipy.stats.norm.ppf(( 1 -p ) /2, loc=df_summary['prediction'], scale=df_summary['epistemic'])
+            lower_z = scipy.stats.norm.ppf(( 1 -p ) /2, loc=single_df_summary['prediction'], scale=single_df_summary['epistemic'])
             # the higher tail
-            higher_z = scipy.stats.norm.ppf(( 1 +p ) /2, loc=df_summary['prediction'], scale=df_summary['epistemic'])
+            higher_z = scipy.stats.norm.ppf(( 1 +p ) /2, loc=single_df_summary['prediction'], scale=single_df_summary['epistemic'])
             # values within the confidence, multiplying T/F list to find union
-            obs_c = np.multiply(lower_z < df_summary["target"], df_summary["target"] < higher_z).mean()
+            obs_c = np.multiply(lower_z < single_df_summary["target"], single_df_summary["target"] < higher_z).mean()
             observed_conf.append(obs_c)
 
         df_single = pd.DataFrame({hue_by: exp, 'Expected Conf.': expected_conf, 'Observed Conf.': observed_conf})
