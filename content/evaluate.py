@@ -189,13 +189,21 @@ def calibration_plot(df_summary, hue_by, hue_by_list):
 
     # todo save plot
 
-def plot_results(df_summary, experiments):
+def plot_results(df_summary, experiments, RMSE_NLL_COMBINED = False):
 
     # Getting performance dictionary (NLL and MSE)
     performance_dict = get_performance(df_summary, experiments)
     performance_df = pd.DataFrame.from_dict(performance_dict)
 
-    performance_df.plot(kind='bar', rot=0.0) # maybe split into RMSE and NLL instead
+    # Plotting performance
+    if RMSE_NLL_COMBINED:
+        performance_df.plot(kind='bar', rot=0.0) # maybe split into RMSE and NLL instead
+    
+    else:
+        axes = performance_df.T.plot(subplots=True, layout=(1,2), kind='bar', rot=0.0, legend=None)
+        for ax in axes.flat:
+            for container in ax.containers:
+                ax.bar_label(container, fmt='%.2f')
 
     latex = performance_df.to_latex()
 
