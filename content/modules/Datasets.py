@@ -152,9 +152,9 @@ class ToyDataset1D:
             plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6.5, -4, alpha=.3, interpolate=True, color='gray')
             plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6.5, alpha=.3, interpolate=True, color='gray')
 
-            plt.fill_between(results['xaxis'], results['y_pred'] - 0.99 * results[uncertainty_type], results['y_pred'] + 0.99 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
-            plt.fill_between(results['xaxis'], results['y_pred'] - 0.95 * results[uncertainty_type], results['y_pred'] + 0.95 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
-            plt.fill_between(results['xaxis'], results['y_pred'] - 0.68 * results[uncertainty_type],  results['y_pred'] + 0.68 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 3 * np.sqrt(results[uncertainty_type]), results['y_pred'] + 3 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 2 * np.sqrt(results[uncertainty_type]), results['y_pred'] + 2 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 1 * np.sqrt(results[uncertainty_type]),  results['y_pred'] + 1 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
 
             plt.xlim([-6.5, 6.5])
             plt.ylim([-150, 150])
