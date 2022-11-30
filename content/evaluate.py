@@ -7,6 +7,8 @@ import scipy.stats
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+import torch
+from content.modules.Losses import NIGLoss
 
 # Found here: https://www.blog.pythonlibrary.org/2021/06/23/creating-an-animated-gif-with-python/
 def make_gif(img_dir, filename, duration=150):
@@ -25,18 +27,27 @@ def make_gif(img_dir, filename, duration=150):
 
 
 def evidential_prediction(outputs):
-    gamma, v, alpha, beta = np.split(outputs, 4, axis=1)
+    gamma, v, alpha, beta = outputs[:,0], outputs[:,1], outputs[:,2], outputs[:,3]# np.split(outputs, 4, axis=1)
     pred = gamma
     alea = beta/(alpha-1)
     epi = beta/(v*(alpha-1))
     return pred.flatten().tolist(), alea.flatten().tolist(), epi.flatten().tolist()
 
 
-def get_errors(target, predicted):
-    # using the sklearn loss functions
-    #NLL = log_loss(target, predicted)
+def get_errors(target, predicted, extra_params = None):
+    # using the sklearn loss functions 
+    # PHIL: MSE, NLL (with and without aleatoric (lambda))
+    # NLL = log_loss(target, predicted)
+
+    NIG_NLL, epi_NLL, alea_NLL = None
+
+    if extra_params:
+        evidential_params, aleatoric, epistemic = extra_params
+        NIG = NIGLoss(0.0) # Lambda set to 0.0 as only NIG NLL is extracted. 
+        NIG_NLL = NIG(torch.stack(evidential_params), torch.stack(target))[1]['NLL']
+
     RMSE = mean_squared_error(target, predicted, squared=False)
-    return (RMSE)
+    return (RMSE, NIG_NLL)
 
 
 
@@ -44,30 +55,41 @@ def get_prediction_summary(loader, model, exp):
 
     #batch_loss, batch_xtra_losses = [], defaultdict(list)
 
-    target, prediction, aleatoric, epistemic = [], [], [], []
+    target, prediction, aleatoric, epistemic, evidential_params = [], [], [], [], []
     for idx_batch, batch in enumerate(loader):
-        target.extend(batch.target.flatten().numpy().tolist())
-        # get predicted
-        outputs = model(batch).detach().numpy()
+        target.extend(batch.target)
+        outputs = model(batch)
+
         if model.model_type == 'evidential':
-            pred, alea, epi = evidential_prediction(outputs)
+            evidential_params.extend(outputs)
+            pred, alea, epi = evidential_prediction(outputs.detach().numpy())
             prediction.extend(pred)
             aleatoric.extend(alea)
             epistemic.extend(epi)
+        
         else:
             # todo: implement for gaussian, ensemble etc
             raise NotImplementedError
 
+    # if gaussian: (only one MSE)
+    # if evidential: (one for alea (based on the sigma), one for epi (based on the sigma), one combined (based on both sigmas), finally, NIG loss)
 
     # todo: get NLL from loss function and add
-    errors = get_errors(target, prediction)
-    RMSE = errors
+    errors = get_errors(target, prediction, extra_params = (evidential_params, aleatoric, epistemic))
+    RMSE, NIG_nll = errors
+
 
     summary = {'Experiment': exp, 'Model': model.model_type,
                'target': target, 'prediction': prediction,
-               'aleatoric': aleatoric, 'epistemic': epistemic}
-                #'error': {'RMSE': RMSE, 'NLL': 0}}
+               'aleatoric': aleatoric, 'epistemic': epistemic,
+               'error': {'RMSE': RMSE}}
+
+    # Expand error dict if evidential
+    if model.model_type == 'evidential':
+        summary['error']['NIG_NLL'] = NIG_nll
+    
     return summary, model.model_type
+
 
 
 def error_percentile_plot(summary_dict, hue_by):
@@ -160,14 +182,13 @@ def calibration_plot(summary, hue_by):
 
     # todo save plot
 
+def get_results(summary):
+
+    return None
+
 
 def in_odd_boxplot(summary):
     a=0
-
-
-
-
-
 
 
 def evaluate_model(loader, models, experiments):
@@ -203,6 +224,10 @@ def evaluate_model(loader, models, experiments):
     # RMSE as a function of increasing confidence interval, ignore, don't
     #error_conf_plot(summary)
     #todo: if modeltype uniqu is same, hue_by is experiment name, else model_yupe
+
+    get_results(summary)
+
+    # PHIL: Make table func
 
 
 
