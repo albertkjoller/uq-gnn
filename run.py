@@ -181,8 +181,10 @@ if __name__ == '__main__':
         args.experiment_name = args.experiment_name[0]
         args.model = args.model[0]
 
-        os.makedirs(args.save_path + f"/{args.experiment_name}")
-
+        try:
+            os.makedirs(args.save_path + f"/{args.experiment_name}")
+        except Exception as e:
+            print('Include --save_path, or folder already exists')
         # Load data and device
         loaders = load_data(args)
         device = torch.device(args.device)
@@ -224,8 +226,7 @@ if __name__ == '__main__':
             loaders_dict[args.id_ood[idx]] = load_data(curr_args)
 
 
-        # todo currently using train, because toy doesn't have test
-        evaluate_model(loaders_dict=loaders_dict, models=models, experiments=args.experiment_name)
-        # we want the RMSE, NLL, (inference speed?)
+        # todo currently using loaders['train'], because toy doesn't have test
+        evaluate_model(loaders_dict=loaders_dict, models=models, experiments=args.experiment_name, args = args)
+        # inference speed also?
 
-        #raise NotImplementedError("Evaluation run currently not fully implemented...")

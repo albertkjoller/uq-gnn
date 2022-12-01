@@ -366,10 +366,10 @@ def synthetic_dataset(path = 'data/', device='cpu'):
 
     extras = False
 
-    edges = pd.read_csv(f'{path}/edgelist_synthetic.csv')
+    edges = pd.read_csv(f'{path}edgelist.csv')
     data = torch.tensor(np.array(edges))
 
-    coords = pd.read_csv(f'{path}/coordinates_synthetic.csv')
+    coords = pd.read_csv(f'{path}coords.csv')
     graph_coords = torch.tensor(np.array(coords))
 
     # edge to graph index is last column ind ata

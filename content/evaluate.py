@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 from content.modules.Losses import NIGLoss
+import re
 
 # Found here: https://www.blog.pythonlibrary.org/2021/06/23/creating-an-animated-gif-with-python/
 def make_gif(img_dir, filename, duration=150):
@@ -133,7 +134,7 @@ def get_prediction_summary(loaders_dict, model, exp):
 
 
 
-def error_percentile_plot(df_summary, hue_by, hue_by_list):
+def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path):
 
     # general dataframe
     df_cutoff = pd.DataFrame(columns=[hue_by, "Percentile", "RMSE"])    # from low to high conf
@@ -154,10 +155,13 @@ def error_percentile_plot(df_summary, hue_by, hue_by_list):
 
     # made for plotitng multiple models confidence
     sns.lineplot(x="Percentile", y="RMSE", hue=hue_by, data=df_cutoff.reset_index())
-    # todo save plot
+    plt.savefig(os.path.join(save_path, f"error_percentile.png"))
+    #plt.show()
+    plt.close()
 
 
-def calibration_plot(df_summary, hue_by, hue_by_list):
+
+def calibration_plot(df_summary, hue_by, hue_by_list, save_path):
     # general dataframe
     df_calibration = pd.DataFrame(columns=[hue_by, "Expected Conf.", "Observed Conf."])
     # from low to high conf
@@ -186,8 +190,10 @@ def calibration_plot(df_summary, hue_by, hue_by_list):
     # made for plotitng multiple models confidence
     sns.lineplot(x="Expected Conf.", y="Observed Conf.", data=df_truth, label='Ideal calibration', color='black', linestyle='--')
     sns.lineplot(x="Expected Conf.", y="Observed Conf.", hue=hue_by, data=df_calibration.reset_index())
+    plt.savefig(os.path.join(save_path, f"calibration.png"))
+    #plt.show()
+    plt.close()
 
-    # todo save plot
 
 def plot_results(df_summary, experiments, RMSE_NLL_COMBINED = False):
 
@@ -198,7 +204,7 @@ def plot_results(df_summary, experiments, RMSE_NLL_COMBINED = False):
     # Plotting performance
     if RMSE_NLL_COMBINED:
         performance_df.plot(kind='bar', rot=0.0) # maybe split into RMSE and NLL instead
-    
+
     else:
         axes = performance_df.T.plot(subplots=True, layout=(1,2), kind='bar', rot=0.0, legend=None)
         for ax in axes.flat:
@@ -210,34 +216,27 @@ def plot_results(df_summary, experiments, RMSE_NLL_COMBINED = False):
     return latex
 
 
-def in_ood_boxplot(df_summary, hue_by, hue_by_list):
+def in_ood_boxplot(df_summary, hue_by, hue_by_list, save_path):
+
+    sns.catplot(x=hue_by, y='Entropy', hue="ID or OOD", data=df_summary, kind="box")  # , showfliers=False)
+    plt.savefig(os.path.join(save_path, f"box.png"))
+    #plt.show()
+    plt.close()
+
+
+def in_ood_hist(df_summary, hue_by, hue_by_list, save_path):
 
     # general dataframe
-    df_entropy = pd.DataFrame(columns=[hue_by, 'Entropy', 'ID or ODD'])    # from low to high conf
     for hue in hue_by_list:
         single_df_summary = df_summary[df_summary[hue_by] == hue]
-        df_single = pd.DataFrame.from_dict({hue_by: hue, 'Entropy': single_df_summary['Entropy'], 'ID or OOD': single_df_summary['ID or OOD']})
-        df_entropy = df_entropy.append(df_single)
-    # add the end to ignore outliers
-    sns.catplot(x=hue_by, y='Entropy', hue="ID or OOD", data=df_entropy, kind="box")  # , showfliers=False)
-
-def in_ood_hist(df_summary, hue_by, hue_by_list):
-
-    # general dataframe
-    #df_entropy = pd.DataFrame(columns=[hue_by, 'Entropy', 'ID or ODD'])    # from low to high conf
-    for hue in hue_by_list:
-        single_df_summary = df_summary[df_summary[hue_by] == hue]
-        df_single = pd.DataFrame.from_dict({'Entropy': single_df_summary['Entropy'], 'ID or OOD': single_df_summary['ID or OOD']})
-        #df_entropy = df_entropy.append(df_single)
-        # add the end to ignore outliers
-        # sns.catplot(x=hue_by, y='Entropy', hue="ID or OOD", data=df_entropy, kind="box")#, showfliers=False)
-        sns.histplot(x='Entropy', hue="ID or OOD", data=df_single, kde=True)
-        plt.show()
-    # sns.histplot(data = penguins, x = "body_mass_g", kde = True, hue = "species")
+        sns.histplot(x='Entropy', hue="ID or OOD", data=single_df_summary, kde=True)
+        plt.savefig(os.path.join(save_path, f"hist_{hue}.png"))
+        #plt.show()
+        plt.close()
 
 
 
-def evaluate_model(loaders_dict, models, experiments):
+def evaluate_model(loaders_dict, models, experiments, args):
     plt.style.use('ggplot')
     df_summary = pd.DataFrame()
     # looping each experiment
@@ -254,25 +253,42 @@ def evaluate_model(loaders_dict, models, experiments):
         hue_by = 'Model' # model type will differentiate
         hue_by_list = list(set(list(df_summary['Model'])))
 
-
+    # generating save folder
+    words = []
+    for exp in experiments:
+        words.extend(re.split(' |_', exp))
+    save_name = 'eval_' + "_".join(sorted(set(words), key=words.index))
+    try:
+        os.makedirs('results' + f"/{save_name}")
+    except Exception as e:
+        print('Save folder already exists')
+    save_path = 'results' + f"/{save_name}"
+    
 
     # RMSE as a function of percentile included sigma values
     #   - including sigma's from all, to only highest sigma's (based on %)
     #   - desire constant/inverse trend, no fluctuations between sigma and error
-    #error_percentile_plot(df_summary, hue_by, hue_by_list)
+    error_percentile_plot(df_summary, hue_by, hue_by_list, save_path)
 
     # % correct predictions as a function of increasing confidence interval
     #   - we want a linear trend, so estimated confidence matches expected
-    #calibration_plot(df_summary, hue_by, hue_by_list)
+    calibration_plot(df_summary, hue_by, hue_by_list, save_path)
 
-    # entropy of in and out of distribution boxplot
-    #   - a difference in entropy between in and out is desired
-    #in_ood_boxplot(df_summary, hue_by, hue_by_list)
+    # id multiple datasets of ID and OOD
+    if len(set(args.id_ood)) != 1:
+        # entropy of in and out of distribution boxplot
+        #   - a difference in entropy between in and out is desired
+        in_ood_boxplot(df_summary, hue_by, hue_by_list, save_path)
+
+        # histogram of entropy from in and out of distribution data
+        in_ood_hist(df_summary, hue_by, hue_by_list, save_path)
+
 
     # histogram of entropy from in and out of distribution data
     # in_ood_hist(df_summary, hue_by, hue_by_list)
 
     latex = plot_results(df_summary, experiments)
+
 
     # RMSE, NIG_nll = errors
     # Expand error dict if evidential

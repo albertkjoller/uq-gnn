@@ -17,8 +17,8 @@ def retrieve_dataset(args):
 
     elif args.dataset == 'QM7':
         return QM7_dataset(path=f"{args.data_dir}/QM7/qm7.mat", device=device)
-    elif args.dataset == 'SYNTHETIC':
-        return synthetic_dataset(path = f"{args.data_dir}/QM7/", device='cpu')
+    elif 'SYNTHETIC' in args.dataset:
+        return synthetic_dataset(path = f"{args.data_dir}/{args.dataset}/", device=device)
         #raise NotImplementedError("TODO: fix path to dataset - what is this?")
         #return synthetic_dataset(f"{args.data_dir}/SYNTHETIC/...") # TODO: ME!
 
@@ -45,7 +45,6 @@ def load_data(args):
             loaders = {'train': dataset['train'].batches, 'val': dataset['val'], 'visualization': dataset['train']}
         else:
             print("\nCREATING DATALOADER OBJECTS...")
-
             # Construct loaders
             graph_info, graph_data = dataset
             loaders = get_loaders(graph_info, graph_data, batch_size=args.batch_size, test_size=0.2, val_size=0.2,
