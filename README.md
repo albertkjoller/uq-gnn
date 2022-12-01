@@ -85,11 +85,22 @@ python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 12
 
 ### Evaluating models
 
-
-*OBS! Currently not fully supported...*
+Evaluate different experiments (across e.g. model seed, type of model, ID or OOD data), where the general running command is:
 
 ```
-python run.py --mode evaluation --data_dir content/data --dataset TOY1D --batch_size 128 \
-              --model TOY1D --experiment_name REPRODUCTION \
-              --save_path models --seed 0
+python run.py --mode evaluation --data_dir content/data --batch_size 128 --save_path models --seed 0
 ```
+
+And for each add on (e.g. data type), the following has to be appended to the running command above, considering the 1D toy example:
+
+```
+--model TOY1D --experiment_name 1D_model_1 --dataset TOY1D --id_ood ID
+```
+As an example, to add another TOY1D model which has trained on a different seed, add the following:
+
+```
+--model TOY1D --experiment_name 1D_model_2 --dataset TOY1D --id_ood ID
+```
+*Note: experiment_name has changed*
+
+The plots will be saved in the `results`-folder with the name `eval_...`
