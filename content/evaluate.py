@@ -76,7 +76,7 @@ def get_prediction_summary(loaders_dict, model, exp):
         # TODO: CHANGE TO TEST INSTEAD OF TRAIN
         evidential_params, model_type = [], []
         num_data = 0
-        for idx_batch, batch in enumerate(loaders['train']):
+        for idx_batch, batch in enumerate(loaders['test']):
             num_data += len(batch.target)
             target.extend(batch.target)
             outputs = model(batch)

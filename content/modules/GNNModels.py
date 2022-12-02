@@ -335,10 +335,6 @@ class BaselineToyModel1D(torch.nn.Module):
         self.net = torch.nn.Sequential(
             torch.nn.Linear(1, hidden_dim),
             torch.nn.ReLU(),
-            torch.nn.Linear(hidden_dim, hidden_dim),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden_dim, hidden_dim),
-            torch.nn.ReLU(),
             torch.nn.Linear(hidden_dim, 2), # (mu, sigma)
         )
         # Initialize weights
@@ -373,10 +369,6 @@ class EvidentialToyModel1D(torch.nn.Module):
         # Regression network for 1D toy task
         self.net = torch.nn.Sequential(
             torch.nn.Linear(1, hidden_dim),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden_dim, hidden_dim),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden_dim, hidden_dim),
             torch.nn.ReLU(),
             torch.nn.Linear(hidden_dim, 4), # (gamma, nu, alpha, beta)
         )

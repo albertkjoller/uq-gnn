@@ -6,7 +6,7 @@ from copy import deepcopy
 
 from content.train import train
 from content.evaluate import evaluate_model
-from content.modules.utils import load_data, get_model_specifications
+from content.modules.utils import load_data, get_model_specifications, save_model, load_model
 
 def get_arguments(parser):
     parser.add_argument(
@@ -153,16 +153,6 @@ def determine_run_version(args):
     version_ += f"_seed.{args.seed}"
 
     return version_
-
-def save_model(model, args):
-    torch.save(model.state_dict(), f"{args.save_path}/{args.experiment_name}/final.pth")
-
-def load_model(args):
-    model, _, _ = get_model_specifications(args)
-    state_dict = torch.load(f"{args.save_path}/{args.experiment_name}/final.pth")
-    model.load_state_dict(state_dict)
-    model.eval()
-    return model
 
 if __name__ == '__main__':
 
