@@ -522,12 +522,14 @@ class collate_fn_class():
         batch.node_list = batch.node_list.to(torch.long)
         batch.edge_list = batch.edge_list.to(torch.long)
         batch.node_graph_index = batch.node_graph_index.to(torch.long)
-        # defining target
-        batch.target = extra_data[self.target]
 
         if self.extras != False:
             for attribute in self.extras:
                 setattr(batch, attribute, extra_data[attribute])
+
+        # defining target
+        batch.target = getattr(batch, self.target)
+
         return batch
 
 
