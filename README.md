@@ -88,7 +88,7 @@ python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 12
 It is possible to evaluate models across e.g. seed to see variance of performance, type of models to compare them, and also different data types like ID or OOD to evaluate the epistemic uncertainty. The general running command line is:
 
 ```
-python run.py --mode evaluation --data_dir content/data --batch_size 128 --save_path models --seed 0
+python run.py --mode evaluation --data_dir content/data --batch_size 128 --save_path models --seed 0 --device cpu
 ```
 And considering the 1D toy example, you can evaluatte an experiment by appending the following to the command above:
 
