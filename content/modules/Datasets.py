@@ -388,12 +388,12 @@ def synthetic_dataset(path = 'data/', device='cpu'):
         #   - use node_list to filter some data further on
         graph_data[graph_idx]['num_nodes'] = len((data[torch.where(data[:, -1] == graph_idx)[0]][:, :2]).flatten().unique())
 
-        graph_data[graph_idx]['node_list'] = torch.arange(0, graph_data[graph_idx]['num_nodes'])
+        graph_data[graph_idx]['node_list'] = torch.arange(0, graph_data[graph_idx]['num_nodes']).to(torch.device(device))
         graph_data[graph_idx]['graph_idx'] = graph_idx # for reference
         # EDGE RELATED:
-        graph_data[graph_idx]['node_coordinates'] = graph_coords[torch.unique(data[torch.where(data[:, -1] == graph_idx)[0], 0]).to(torch.long)].to(torch.long)
+        graph_data[graph_idx]['node_coordinates'] = graph_coords[torch.unique(data[torch.where(data[:, -1] == graph_idx)[0], 0]).to(torch.long)].to(torch.long).to(torch.device(device))
         # Edge list - fully connected graphs thus perform possible combinations
-        graph_data[graph_idx]['edge_list'] = torch.tensor(list(combinations(graph_data[graph_idx]['node_list'], 2))).to(torch.long)
+        graph_data[graph_idx]['edge_list'] = torch.tensor(list(combinations(graph_data[graph_idx]['node_list'], 2))).to(torch.long).to(torch.device(device))
         #graph_data[graph_idx]['edge_list'] = data[torch.where(data[:, -1] == graph_idx)[0]][:, :2]
     return graph_info, graph_data
 

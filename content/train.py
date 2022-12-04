@@ -28,7 +28,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
     train_lss, val_lss = np.zeros(epochs), np.zeros(epochs // val_every_step)
 
     with trange(epochs) as t:
-        val_step = -1
+        val_step = 0
         for epoch in t:
             # VALIDATION
             if epoch % val_every_step == 0:

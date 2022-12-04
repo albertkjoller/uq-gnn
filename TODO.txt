@@ -11,6 +11,10 @@
 		compared to points where the model predictions are deviating from the true target.
 
 
+### FIXES ###
+1) torch.device in 3D GNNs for edge_list
+
+
 ### IMPLEMENTATION ###
 # Figures
 1) Calibration plots
