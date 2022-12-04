@@ -246,6 +246,7 @@ def evaluate_model(loaders_dict, models, experiments, args):
         df_single_summary = pd.DataFrame.from_dict(summary)
         df_summary = df_summary.append(df_single_summary)
 
+    # todo: what if we want to compare hyperparams? like e.g. lambda, then not implemented
     if len(set(list(df_summary['Model']))) == 1: # if 1 model type then comparing multiple experiments
         hue_by = 'Experiment' # experiment name will differentiate
         hue_by_list = list(set(list(df_summary['Experiment'])))

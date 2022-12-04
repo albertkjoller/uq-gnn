@@ -364,7 +364,8 @@ def synthetic_dataset(path = 'data/', device='cpu'):
     Loads a data set that was created in XXXXX.py
     """
 
-    extras = False
+    extras = ['molecule_summed_force']
+
 
     edges = pd.read_csv(f'{path}edgelist.csv')
     data = torch.tensor(np.array(edges))
@@ -379,7 +380,7 @@ def synthetic_dataset(path = 'data/', device='cpu'):
 
     graph_list = range(num_graphs)
     # todo is target edge_length?
-    graph_info = {'graph_list': graph_list, 'target': 'edge_lengths', 'extras': extras}
+    graph_info = {'graph_list': graph_list, 'target': 'molecule_summed_force', 'extras': extras}
 
     graph_data = {}
     for graph_idx in graph_list:
@@ -395,6 +396,7 @@ def synthetic_dataset(path = 'data/', device='cpu'):
         # Edge list - fully connected graphs thus perform possible combinations
         graph_data[graph_idx]['edge_list'] = torch.tensor(list(combinations(graph_data[graph_idx]['node_list'], 2))).to(torch.long)
         #graph_data[graph_idx]['edge_list'] = data[torch.where(data[:, -1] == graph_idx)[0]][:, :2]
+        graph_data[graph_idx]['molecule_summed_force'] = data[torch.where(data[:,-1] == graph_idx)[0]][:,3][0]
     return graph_info, graph_data
 
 
