@@ -152,9 +152,9 @@ class ToyDataset1D:
             plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6.5, -4, alpha=.3, interpolate=True, color='gray')
             plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6.5, alpha=.3, interpolate=True, color='gray')
 
-            plt.fill_between(results['xaxis'], results['y_pred'] - 0.99 * results[uncertainty_type], results['y_pred'] + 0.99 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
-            plt.fill_between(results['xaxis'], results['y_pred'] - 0.95 * results[uncertainty_type], results['y_pred'] + 0.95 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
-            plt.fill_between(results['xaxis'], results['y_pred'] - 0.68 * results[uncertainty_type],  results['y_pred'] + 0.68 * results[uncertainty_type], alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 3 * np.sqrt(results[uncertainty_type]), results['y_pred'] + 3 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 2 * np.sqrt(results[uncertainty_type]), results['y_pred'] + 2 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 1 * np.sqrt(results[uncertainty_type]),  results['y_pred'] + 1 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
 
             plt.xlim([-6.5, 6.5])
             plt.ylim([-150, 150])
@@ -366,10 +366,10 @@ def synthetic_dataset(path = 'data/', device='cpu'):
 
     extras = False
 
-    edges = pd.read_csv(f'{path}/edgelist_synthetic.csv')
+    edges = pd.read_csv(f'{path}edgelist.csv')
     data = torch.tensor(np.array(edges))
 
-    coords = pd.read_csv(f'{path}/coordinates_synthetic.csv')
+    coords = pd.read_csv(f'{path}coords.csv')
     graph_coords = torch.tensor(np.array(coords))
 
     # edge to graph index is last column ind ata
@@ -522,12 +522,14 @@ class collate_fn_class():
         batch.node_list = batch.node_list.to(torch.long)
         batch.edge_list = batch.edge_list.to(torch.long)
         batch.node_graph_index = batch.node_graph_index.to(torch.long)
-        # defining target
-        batch.target = extra_data[self.target]
 
         if self.extras != False:
             for attribute in self.extras:
                 setattr(batch, attribute, extra_data[attribute])
+
+        # defining target
+        batch.target = getattr(batch, self.target)
+
         return batch
 
 

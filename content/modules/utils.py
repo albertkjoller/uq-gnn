@@ -1,5 +1,7 @@
 
 import torch
+import numpy as np
+
 
 from content.modules.Datasets import ToyDataset1D, QM7_dataset, synthetic_dataset, get_loaders
 from content.modules.GNNModels import EvidentialToyModel1D, EvidentialGNN3D, BaselineToyModel1D, BaselineGNN3D
@@ -17,8 +19,9 @@ def retrieve_dataset(args):
 
     elif args.dataset == 'QM7':
         return QM7_dataset(path=f"{args.data_dir}/QM7/qm7.mat", device=device)
-    elif args.dataset == 'SYNTHETIC':
-        raise NotImplementedError("TODO: fix path to dataset - what is this?")
+    elif 'SYNTHETIC' in args.dataset:
+        return synthetic_dataset(path = f"{args.data_dir}/{args.dataset}/", device=device)
+        #raise NotImplementedError("TODO: fix path to dataset - what is this?")
         #return synthetic_dataset(f"{args.data_dir}/SYNTHETIC/...") # TODO: ME!
 
 def load_data(args):
@@ -40,11 +43,10 @@ def load_data(args):
         # Load data
         dataset = retrieve_dataset(args)
 
-        if args.dataset == 'TOY1D':
-            loaders = {'train': dataset['train'].batches, 'val': dataset['val'], 'visualization': dataset['train']}
+        if args.dataset == 'TOY1D': # TODO: add test as ARON said?
+            loaders = {'train': dataset['train'].batches, 'val': dataset['val'], 'test': dataset['val'], 'visualization': dataset['train']}
         else:
             print("\nCREATING DATALOADER OBJECTS...")
-
             # Construct loaders
             graph_info, graph_data = dataset
             loaders = get_loaders(graph_info, graph_data, batch_size=args.batch_size, test_size=0.2, val_size=0.2,
@@ -91,3 +93,33 @@ def get_model_specifications(args):
         return model.to(torch.device(args.device)), loss_function, optimizer
     else:
         return model.to(torch.device('cpu')), None, None
+
+
+def save_model(model, args):
+    torch.save(model.state_dict(), f"{args.save_path}/{args.experiment_name}/final.pth")
+
+def load_model(args):
+    model, _, _ = get_model_specifications(args)
+    state_dict = torch.load(f"{args.save_path}/{args.experiment_name}/best.ckpt")
+    model.load_state_dict(state_dict)
+    model.eval()
+    return model
+
+
+# Function found here: https://stackoverflow.com/questions/52756152/tensorboard-extract-scalar-by-a-script
+from tensorboard.backend.event_processing import event_accumulator
+
+def _load_tb_run(path):
+    event_acc = event_accumulator.EventAccumulator(path)
+    event_acc.Reload()
+    data = {}
+
+    for tag in sorted(event_acc.Tags()["scalars"]):
+        x, y = [], []
+
+        for scalar_event in event_acc.Scalars(tag):
+            x.append(scalar_event.step)
+            y.append(scalar_event.value)
+
+        data[tag] = (np.asarray(x), np.asarray(y))
+    return data
