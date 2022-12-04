@@ -215,5 +215,7 @@ if __name__ == '__main__':
             # dataset
             loaders_dict[args.id_ood[idx]] = load_data(curr_args)
 
+
         evaluate_model(loaders_dict=loaders_dict, models=models, experiments=args.experiment_name, args = args)
+
 
