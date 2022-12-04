@@ -216,7 +216,6 @@ if __name__ == '__main__':
             loaders_dict[args.id_ood[idx]] = load_data(curr_args)
 
 
-        # todo currently using loaders['train'], because toy doesn't have test
-        evaluate_model(loaders_dict=loaders_dict, models=models, experiments=args.experiment_name, args=args)
-        # inference speed also?
+        evaluate_model(loaders_dict=loaders_dict, models=models, experiments=args.experiment_name, args = args)
+
 

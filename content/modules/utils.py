@@ -44,7 +44,7 @@ def load_data(args):
         dataset = retrieve_dataset(args)
 
         if args.dataset == 'TOY1D': # TODO: add test as ARON said?
-            loaders = {'train': dataset['train'].batches, 'val': dataset['val'], 'test': dataset['val'], 'visualization': dataset['train']}
+            loaders = {'train': dataset['train'].batches, 'val': dataset['val'], 'test': dataset['val'].batches, 'visualization': dataset['train']}
         else:
             print("\nCREATING DATALOADER OBJECTS...")
             # Construct loaders

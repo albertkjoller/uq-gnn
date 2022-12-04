@@ -151,7 +151,7 @@ def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path):
         # take mean RMSE for cutoffs of higher uncertainty
         mean_error = [single_df_summary[cutoff:]["Error"].mean() for cutoff in cutoff_inds]
         df_single_cutoff = pd.DataFrame({hue_by: hue, 'Percentile': percentiles, 'RMSE': mean_error})
-        df_cutoff = df_cutoff.append(df_single_cutoff)
+        df_cutoff = pd.concat([df_cutoff, df_single_cutoff])
 
     # made for plotitng multiple models confidence
     sns.lineplot(x="Percentile", y="RMSE", hue=hue_by, data=df_cutoff.reset_index())
@@ -180,7 +180,7 @@ def calibration_plot(df_summary, hue_by, hue_by_list, save_path):
             observed_conf.append(obs_c)
 
         df_single = pd.DataFrame({hue_by: hue, 'Expected Conf.': expected_conf, 'Observed Conf.': observed_conf})
-        df_calibration = df_calibration.append(df_single)
+        df_calibration = pd.concat([df_calibration, df_single])
 
     # the desired
     df_truth = pd.DataFrame({hue_by: 'Ideal calibration', 'Expected Conf.': expected_conf, 'Observed Conf.': expected_conf})
@@ -206,14 +206,14 @@ def plot_results(df_summary, experiments, RMSE_NLL_COMBINED = False):
         performance_df.plot(kind='bar', rot=0.0) # maybe split into RMSE and NLL instead
 
     else:
-        axes = performance_df.T.plot(subplots=True, layout=(1,2), kind='bar', rot=0.0, legend=None)
+        axes = performance_df.T.plot(subplots=True, layout=(1,2), kind='bar', rot=20, legend=None)
         for ax in axes.flat:
             for container in ax.containers:
                 ax.bar_label(container, fmt='%.2f')
 
-    latex = performance_df.to_latex()
-
-    return latex
+    #table = performance_df.style.to_latex()
+    table = performance_df
+    return table
 
 
 def in_ood_boxplot(df_summary, hue_by, hue_by_list, save_path):
@@ -244,7 +244,7 @@ def evaluate_model(loaders_dict, models, experiments, args):
         # looping each experiment, getting data on each dataset (ID/OOD)
         summary = get_prediction_summary(loaders_dict, models[exp], exp)
         df_single_summary = pd.DataFrame.from_dict(summary)
-        df_summary = df_summary.append(df_single_summary)
+        df_summary = pd.concat([df_summary, df_single_summary])
 
     # todo: what if we want to compare hyperparams? like e.g. lambda, then not implemented
     if len(set(list(df_summary['Model']))) == 1: # if 1 model type then comparing multiple experiments
@@ -301,6 +301,8 @@ def evaluate_model(loaders_dict, models, experiments, args):
     # Combined --> target Normal(gamma, aleatoric, epistemic)
 
     # PHIL: Make table func
+
+    return latex
 
 
 
