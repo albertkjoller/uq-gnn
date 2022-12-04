@@ -82,8 +82,8 @@ test sets; the first test set, the nodes are sampled with a centerbox of -0.5,0.
 test set, the nodes are sampled with a centerbox of -10,10.
 """
 if __name__== '__main__':
-    mol_sizes = np.hstack((np.zeros(20)+3,np.zeros(20)+4))
-    mol_sizes = np.hstack((mol_sizes, np.zeros(40)+5))
+    mol_sizes = np.hstack((np.zeros(100)+3,np.zeros(100)+4))
+    mol_sizes = np.hstack((mol_sizes, np.zeros(200)+5))
 
     #centerbox = (-5,5):
     create_molecules(mol_sizes,'temp_synth/2', center_box=(-2,2))
