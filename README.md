@@ -93,7 +93,7 @@ python run.py --mode evaluation --data_dir content/data --batch_size 128 --save_
 And considering the 1D toy example, you can evaluatte an experiment by appending the following to the command above:
 
 ```
---experiment_name 1D_model_1 --model TOY1D --dataset TOY1D --id_ood ID
+--experiment_name 1D_model_1 --model 1D_model_1 --dataset TOY1D --id_ood ID
 ```
 And in order to add another experiment or dataset in the evaluation, simply replicate the line above and adjust the necessary parameters. Below is an example of appending the same model but trained on a different seed,
 
