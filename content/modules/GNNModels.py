@@ -122,18 +122,18 @@ class EvidentialGNN3D(torch.nn.Module):
 
         # Message passing networks
         self.message_net = torch.nn.Sequential(
-            torch.nn.BatchNorm1d(self.state_dim + self.num_features),
-            torch.nn.Linear(self.state_dim + self.num_features, self.hidden_dim),
+            torch.nn.BatchNorm1d(self.state_dim + self.num_features).double(),
+            torch.nn.Linear(self.state_dim + self.num_features, self.hidden_dim).double(),
             torch.nn.Dropout(0.5),
             torch.nn.Tanh(),
-            torch.nn.Linear(self.hidden_dim, self.state_dim),
+            torch.nn.Linear(self.hidden_dim, self.state_dim).double(),
             torch.nn.Dropout(0.5),
             torch.nn.Tanh(),
         )
 
         # Output net
         self.output_net = torch.nn.Sequential(
-            torch.nn.Linear(self.state_dim, self.output_dim) # (gamma, v, alpha, beta)
+            torch.nn.Linear(self.state_dim, self.output_dim).double() # (gamma, v, alpha, beta)
         )
 
         # Initialize weights
@@ -150,7 +150,7 @@ class EvidentialGNN3D(torch.nn.Module):
           
     def init_weights(self, layer): # Found here: https://www.askpython.com/python-modules/initialize-model-weights-pytorch
         if type(layer) == torch.nn.Linear:
-            torch.nn.init.kaiming_normal_(layer.weight, mode='fan_out', nonlinearity='relu') # Kaiming for Relu
+            torch.nn.init.kaiming_normal_(layer.weight, mode='fan_out', nonlinearity='relu').double() # Kaiming for Relu
     
 
     def forward(self, x):
@@ -178,7 +178,7 @@ class EvidentialGNN3D(torch.nn.Module):
 
         """
         # Initialize node features to zeros
-        self.state = torch.zeros([x.num_nodes, self.state_dim]).to(self.device)
+        self.state = torch.zeros([x.num_nodes, self.state_dim]).to(self.device).double()
 
         # Loop over message passing rounds
         for _ in range(self.num_message_passing_rounds):
@@ -204,7 +204,7 @@ class EvidentialGNN3D(torch.nn.Module):
             # Aggregate: Sum messages
             self.state.index_add_(0, x.node_to, message)
         # Aggretate: Sum node features
-        self.graph_state = torch.zeros((x.num_graphs, self.state_dim)).to(self.device)
+        self.graph_state = torch.zeros((x.num_graphs, self.state_dim)).to(self.device).double()
         self.graph_state.index_add_(0, x.node_graph_index, self.state)
 
         # Get parameters of NIG distribution (4-dimensional output)

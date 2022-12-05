@@ -1,4 +1,3 @@
-
 import os
 
 import torch
@@ -16,7 +15,9 @@ from numba import jit
 
 from dgl.data import QM9Dataset
 
+
 class ToyDataset1D:
+
     def __init__(self, B: int, N: int, range_, device: torch.device, noise_level: float, OOD_boundaries=None, visualize_on_load=False, seed=42):
         # Set seed and device
         self.seed = seed
@@ -41,8 +42,8 @@ class ToyDataset1D:
         # Restructure
         self.batches = []
         for batch_idx in range(self.num_batches):
-            batch_data_ = self.data['data'][batch_idx,:].view(B, -1)
-            batch_targets_ = self.data['target'][batch_idx,:].view(B, -1)
+            batch_data_ = self.data['data'][batch_idx, :].view(B, -1)
+            batch_targets_ = self.data['target'][batch_idx, :].view(B, -1)
             self.batches.append(BATCH(batch_data_, batch_targets_))
 
         self.unbatched_data = self.data
@@ -61,10 +62,12 @@ class ToyDataset1D:
             self.data['data'] = torch.FloatTensor(self.N).uniform_(self.range_[0], self.range_[1])[order_].reshape(-1, self.B, 1).to(self.device)
         self.data['target'] = self.data['data'] ** 3 + (torch.randn(self.N, 1).reshape(-1, self.B, 1) * self.noise_level).to(self.device)
 
+
     def visualize_dataset(self, ):
         # plot data
         plt.figure()
-        plt.plot(self.unbatched_data['data'].detach().flatten().cpu(), self.unbatched_data['target'].detach().flatten().cpu(), 'ko', markersize=0.5)
+        plt.plot(self.unbatched_data['data'].detach().flatten().cpu(),
+                 self.unbatched_data['target'].detach().flatten().cpu(), 'ko', markersize=0.5)
         plt.plot(torch.arange(-6, 6, 12 / self.N), torch.arange(-6, 6, 12 / self.N) ** 3, 'r--')
 
         plt.vlines(-4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
@@ -76,7 +79,8 @@ class ToyDataset1D:
         plt.ylim([-150, 150])
         plt.show()
 
-    def plot_regression_line(self, model: torch.nn.Module, epoch: int, uncertainty_types: list, save_path=None, show=False):
+    def plot_regression_line(self, model: torch.nn.Module, epoch: int, uncertainty_types: list, save_path=None,
+                             show=False):
         plt.style.use('ggplot')
 
         # Predict on the data range
@@ -112,7 +116,6 @@ class ToyDataset1D:
             ax[1].set_title(r'$\sigma$')
             ax[0].set_xticks(np.arange(-6, 7, 2), np.arange(-6, 7, 2))
 
-
         fig.suptitle(f"EPOCH {epoch}")
         fig.suptitle(f"PARAMETERS (EPOCH = {epoch})", fontsize=20, weight='bold')
         os.makedirs(save_path / 'PARAMS', exist_ok=True)
@@ -127,7 +130,7 @@ class ToyDataset1D:
         # Gather information in dataframe for plotting
         results = pd.DataFrame({'xaxis': xaxis,
                                 'y_true': y_true,
-                                'y_pred': y_pred,})
+                                'y_pred': y_pred, })
 
         for uncertainty_type in uncertainty_types:
             os.makedirs(save_path / uncertainty_type.upper(), exist_ok=True)
@@ -140,8 +143,8 @@ class ToyDataset1D:
             else:
                 uncertainty = sigma.detach().flatten().cpu().numpy()
 
-            results[f'{uncertainty_type}'] = uncertainty                        # Store uncertainty
-            results[uncertainty_type].replace(np.inf, 1e6, inplace=True)        # Replace inf for visualization purposes
+            results[f'{uncertainty_type}'] = uncertainty  # Store uncertainty
+            results[uncertainty_type].replace(np.inf, 1e6, inplace=True)  # Replace inf for visualization purposes
 
             # Print uncertainty estimates (mainly for debugging...)
             # print(f"\n{uncertainty_type.upper()} (-4, 4): {np.round(results[np.logical_and(results['xaxis'] > -4, results['xaxis'] < 4)][uncertainty_type].sum(), 2)}")
@@ -149,18 +152,27 @@ class ToyDataset1D:
 
             # Plot regression line and data points
             plt.figure(dpi=250)
-            plt.plot(self.unbatched_data['data'].detach().flatten().cpu(), self.unbatched_data['target'].detach().flatten().cpu(), 'ko', markersize=0.5)
+            plt.plot(self.unbatched_data['data'].detach().flatten().cpu(),
+                     self.unbatched_data['target'].detach().flatten().cpu(), 'ko', markersize=0.5)
             plt.plot(results['xaxis'], results['y_true'], '--r')
             plt.plot(results['xaxis'], results['y_pred'], color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])
 
             plt.vlines(-4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
             plt.vlines(4, -6.5 ** 3, 6.5 ** 3, colors='gray', linestyles='--')
-            plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6.5, -4, alpha=.3, interpolate=True, color='gray')
-            plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6.5, alpha=.3, interpolate=True, color='gray')
+            plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), -6.5, -4, alpha=.3, interpolate=True,
+                              color='gray')
+            plt.fill_betweenx(pd.Series(np.arange(-6.5 ** 3, 6.5 ** 3)), 4, 6.5, alpha=.3, interpolate=True,
+                              color='gray')
 
-            plt.fill_between(results['xaxis'], results['y_pred'] - 3 * np.sqrt(results[uncertainty_type]), results['y_pred'] + 3 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
-            plt.fill_between(results['xaxis'], results['y_pred'] - 2 * np.sqrt(results[uncertainty_type]), results['y_pred'] + 2 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
-            plt.fill_between(results['xaxis'], results['y_pred'] - 1 * np.sqrt(results[uncertainty_type]),  results['y_pred'] + 1 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True, color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 3 * np.sqrt(results[uncertainty_type]),
+                             results['y_pred'] + 3 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True,
+                             color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 2 * np.sqrt(results[uncertainty_type]),
+                             results['y_pred'] + 2 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True,
+                             color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
+            plt.fill_between(results['xaxis'], results['y_pred'] - 1 * np.sqrt(results[uncertainty_type]),
+                             results['y_pred'] + 1 * np.sqrt(results[uncertainty_type]), alpha=.2, interpolate=True,
+                             color=list(plt.rcParams['axes.prop_cycle'])[2]['color'])  # step='post')
 
             plt.xlim([-6.5, 6.5])
             plt.ylim([-150, 150])
@@ -169,12 +181,11 @@ class ToyDataset1D:
             if save_path != None:
                 plt.savefig(save_path / f"{uncertainty_type}/0{epoch}.png")
             if show == True:
-                #plt.show(block=False)
+                # plt.show(block=False)
                 plt.close("all")
             plt.close("all")
 
-
-        if 'aleatoric' in uncertainty_types and 'epistemic' in uncertainty_types and show==True:
+        if 'aleatoric' in uncertainty_types and 'epistemic' in uncertainty_types and show == True:
             os.makedirs(save_path / "COMBINED_UNCERTAINTIES", exist_ok=True)
             results.plot(x='xaxis', y=['aleatoric', 'epistemic'])
             plt.savefig(save_path / f"COMBINED_UNCERTAINTIES/0{epoch}.png")
@@ -260,7 +271,7 @@ class GraphDataset():
         for i in range(self.num_graphs):
             coords = self.node_coordinates[self.node_graph_index == i]
             mean = coords.mean(0)
-            self.node_coordinates[self.node_graph_index == i] = coords-mean
+            self.node_coordinates[self.node_graph_index == i] = coords - mean
         return self
 
     def rotate(self, angle, axis=None):
@@ -280,14 +291,14 @@ class GraphDataset():
         relative_angle = angle - self._current_angle
         self._current_angle = angle
         phi = torch.tensor(relative_angle)
-        
+
         if self.dim == 2:
             R = torch.tensor([[torch.cos(phi), -torch.sin(phi)],
-                             [torch.sin(phi), torch.cos(phi)]])
-        
+                              [torch.sin(phi), torch.cos(phi)]])
+
         if self.dim == 3:
             assert axis != None, "Specify dimension on which to rotate (either 0, 1 or 2)"
-            
+
             # Setup rotation matrix
             R = torch.zeros(3, 3)
             r_ax1, r_ax2 = torch.arange(3)[torch.arange(3) != axis]
@@ -297,29 +308,29 @@ class GraphDataset():
             R[r_ax1, r_ax1] = torch.cos(phi)
             R[r_ax1, r_ax2] = -torch.sin(phi)
             R[r_ax2, r_ax1] = torch.sin(phi)
-            R[r_ax2, r_ax2] = torch.cos(phi)  
-            
+            R[r_ax2, r_ax2] = torch.cos(phi)
+
         for i in range(self.num_graphs):
             coords = self.node_coordinates[self.node_graph_index == i]
             mean = coords.mean(0)
             self.node_coordinates[self.node_graph_index == i] = (
-                coords-mean) @ R + mean
+                                                                        coords - mean) @ R + mean
         return self
 
 
 class QM9:
     """Molecular dataset.
 
-    
+
     """
 
     def __init__(self, label_attr: str, num_graphs=None, test_size=0.1, device='cpu'):
-        #super().__init__(dim=)
+        # super().__init__(dim=)
 
         # Store input arguments in class
         self.num_graphs = num_graphs
         self.device = device
-        
+
         # Load graph data
         data = QM9Dataset(label_keys=[label_attr])
         num_graphs = num_graphs if num_graphs != None else data.__len__()
@@ -339,7 +350,7 @@ class QM9:
             self.data[dtype].edge_list = graphs_[2].to(self.device)
             self.data[dtype].target = graphs_[3].unsqueeze(1).to(self.device)
             self.data[dtype].num_graphs = graphs_[3].__len__()
-    
+
     @jit(forceobj=True)
     def get_information(self, data, idxs):
         res = np.empty(len(idxs), dtype=np.float64)
@@ -363,15 +374,16 @@ class QM9:
             # Previous graph length
             pgl += coords_.__len__()
 
-        return node_coordinates, node_graph_index.to(torch.long), edge_list.to(torch.long), torch.tensor(res).to(torch.float)
+        return node_coordinates, node_graph_index.to(torch.long), edge_list.to(torch.long), torch.tensor(res).to(
+            torch.float)
 
-def synthetic_dataset(path = 'data/', device='cpu'):
+
+def synthetic_dataset(path='data/', device='cpu'):
     """Synthetic Data á la Felix!
     Loads a data set that was created in XXXXX.py
     """
 
     extras = ['molecule_summed_force']
-
 
     edges = pd.read_csv(f'{path}edgelist.csv')
     data = torch.tensor(np.array(edges))
@@ -393,21 +405,25 @@ def synthetic_dataset(path = 'data/', device='cpu'):
         graph_data[graph_idx] = {}
         # NODE RELATED:
         #   - use node_list to filter some data further on
-        graph_data[graph_idx]['num_nodes'] = len((data[torch.where(data[:, -1] == graph_idx)[0]][:, :2]).flatten().unique())
+        graph_data[graph_idx]['num_nodes'] = len(
+            (data[torch.where(data[:, -1] == graph_idx)[0]][:, :2]).flatten().unique())
 
-        graph_data[graph_idx]['node_list'] = torch.arange(0, graph_data[graph_idx]['num_nodes']).to(torch.device(device))
-        graph_data[graph_idx]['graph_idx'] = graph_idx # for reference
+        graph_data[graph_idx]['node_list'] = torch.arange(0, graph_data[graph_idx]['num_nodes']).to(
+            torch.device(device))
+        graph_data[graph_idx]['graph_idx'] = graph_idx  # for reference
         # EDGE RELATED:
-        graph_data[graph_idx]['node_coordinates'] = graph_coords[torch.unique(data[torch.where(data[:, -1] == graph_idx)[0], 0]).to(torch.long)].to(torch.long).to(torch.device(device))
+        graph_data[graph_idx]['node_coordinates'] = graph_coords[
+            torch.unique(data[torch.where(data[:, -1] == graph_idx)[0], 0]).to(torch.long)].to(torch.float64).to(
+            torch.device(device))
         # Edge list - fully connected graphs thus perform possible combinations
-        graph_data[graph_idx]['edge_list'] = torch.tensor(list(combinations(graph_data[graph_idx]['node_list'], 2))).to(torch.long).to(torch.device(device))
-        #graph_data[graph_idx]['edge_list'] = data[torch.where(data[:, -1] == graph_idx)[0]][:, :2]
-        graph_data[graph_idx]['molecule_summed_force'] = data[torch.where(data[:,-1] == graph_idx)[0]][:,3][0]
+        graph_data[graph_idx]['edge_list'] = torch.tensor(list(combinations(graph_data[graph_idx]['node_list'], 2))).to(
+            torch.long).to(torch.device(device))
+        # graph_data[graph_idx]['edge_list'] = data[torch.where(data[:, -1] == graph_idx)[0]][:, :2]
+        graph_data[graph_idx]['molecule_summed_force'] = data[torch.where(data[:, -1] == graph_idx)[0]][:, 3][0]
     return graph_info, graph_data
 
 
 def QM7_dataset(path, device=torch.device('cpu')):
-
     # NOTE: define extras for this dataset apart from the common
     extras = ['molecule_energy', 'node_charge', 'edge_coulomb']
 
@@ -415,42 +431,49 @@ def QM7_dataset(path, device=torch.device('cpu')):
     qm7 = scipy.io.loadmat(path)
     # GRAPH/MOLECULE RELATED:
     # Number of graphs in the dataset, i.e. molecules
-    num_graphs = len(qm7['T'][0]) # T is atomization energies (target)
+    num_graphs = len(qm7['T'][0])  # T is atomization energies (target)
     # Graph list, each molecule has a distinct index
     graph_list = range(num_graphs)
     graph_info = {'graph_list': graph_list, 'target': 'molecule_energy', 'extras': extras}
 
-    num_nodes = int((qm7['Z'] > 0).sum()) # used to assert later
+    num_nodes = int((qm7['Z'] > 0).sum())  # used to assert later
 
     # looping each molecule
     graph_data = {}
     for graph_idx in tqdm(graph_list):
         graph_data[graph_idx] = {}
-        graph_data[graph_idx]['graph_idx'] = graph_idx # for reference
+        graph_data[graph_idx]['graph_idx'] = graph_idx  # for reference
 
         graph_data[graph_idx]['molecule_energy'] = torch.tensor(qm7['T'][0][graph_idx]).to(device)
         # from 0 and up
         # NODE/ATOM RELATED:
         #   - use node_list to filter some data further on
-        graph_data[graph_idx]['node_list'] = torch.tensor(np.array(range(int((qm7['Z'][graph_idx] > 0).sum())))).to(device)
+        graph_data[graph_idx]['node_list'] = torch.tensor(np.array(range(int((qm7['Z'][graph_idx] > 0).sum())))).to(
+            device)
         graph_data[graph_idx]['num_nodes'] = len(graph_data[graph_idx]['node_list'])
         # Node graph index, molecule number each atom belongs to
         # Node coordinates
-        graph_data[graph_idx]['node_coordinates'] = torch.tensor(qm7['R'][graph_idx]).to(device)[graph_data[graph_idx]['node_list'].to(torch.long).to(device)]
+        graph_data[graph_idx]['node_coordinates'] = torch.tensor(qm7['R'][graph_idx]).to(device)[
+            graph_data[graph_idx]['node_list'].to(torch.long).to(device)]
         # Node atomic charge
         # total charges higher than 0 (there are no negative and 0 charged atoms, see above)
-        graph_data[graph_idx]['node_charge'] = torch.tensor(qm7['Z'][graph_idx]).to(device)[graph_data[graph_idx]['node_list'].to(torch.long)]
+        graph_data[graph_idx]['node_charge'] = torch.tensor(qm7['Z'][graph_idx]).to(device)[
+            graph_data[graph_idx]['node_list'].to(torch.long)]
         # EDGE RELATED:
         # Edge list - fully connected graphs thus perform possible combinations
-        graph_data[graph_idx]['edge_list'] = torch.tensor(list(combinations(graph_data[graph_idx]['node_list'],2))).to(torch.long).to(device)
+        graph_data[graph_idx]['edge_list'] = torch.tensor(list(combinations(graph_data[graph_idx]['node_list'], 2))).to(
+            torch.long).to(device)
         # the coulomb value for each edge
         graph_data[graph_idx]['edge_coulomb'] = torch.zeros(len(graph_data[graph_idx]['edge_list'])).to(device)
         for edge_idx, edge in enumerate(graph_data[graph_idx]['edge_list']):
-            graph_data[graph_idx]['edge_coulomb'][edge_idx] = torch.tensor(qm7['X'][graph_idx][edge[0], edge[1]]).to(device)
+            graph_data[graph_idx]['edge_coulomb'][edge_idx] = torch.tensor(qm7['X'][graph_idx][edge[0], edge[1]]).to(
+                device)
             # NOTE: GraphDataset automatically calculates edge_lengths
     return graph_info, graph_data
 
-def get_loaders(graph_info, graph_data, device, batch_size=64, test_size=0.2, val_size=0.2, random_state=42, shuffle=True):
+
+def get_loaders(graph_info, graph_data, device, batch_size=64, test_size=0.2, val_size=0.2, random_state=42,
+                shuffle=True):
     graph_list = graph_info['graph_list']
     target = graph_info['target']
     extras = graph_info['extras']
@@ -473,6 +496,7 @@ def get_loaders(graph_info, graph_data, device, batch_size=64, test_size=0.2, va
     test_loader = DataLoader(test_data, batch_size=batch_size, collate_fn=collate_fn, shuffle=False, drop_last=True)
     return {'train': train_loader, 'val': val_loader, 'test': test_loader}
 
+
 class collate_fn_class():
     """
     Used to collect a list/batch of graphs into a single data object, in this case GraphDataset(),
@@ -480,6 +504,7 @@ class collate_fn_class():
     I.e. the goal is to collect the data for all graphs into single dtype instances
     Class object to use extra variables if necessary/defined
     """
+
     def __init__(self, extras=False, target='edge_length', device=torch.device('cpu')):
         self.extras = extras
         self.target = target
@@ -522,7 +547,8 @@ class collate_fn_class():
                 for attribute in self.extras:
                     # concatenating data
                     #   NOTE: object has to be 1D and dtype and if index related properties are not implemented
-                    extra_data[attribute] = torch.concat([extra_data[attribute], torch.unsqueeze(graph_data[attribute], dim=-1)])
+                    extra_data[attribute] = torch.concat(
+                        [extra_data[attribute], torch.unsqueeze(graph_data[attribute], dim=-1)])
                 # increment to avoid duplicated (nodes have to be distinct across graphs)
             node_ref_idx += num_nodes
 
@@ -545,6 +571,7 @@ class iterate_data(Dataset):
     '''
     Used to get a graph based on its index when looping
     '''
+
     def __init__(self, graph_data, subset_idxs):
         # converting to tensor
         self.N = len(subset_idxs)
