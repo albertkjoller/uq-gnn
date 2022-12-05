@@ -37,31 +37,32 @@ def evidential_prediction(outputs):
 def get_performance(df_summary, experiments):
 
     performance_dict = {}
+    #evaluation_type = 'ID'
 
     for exp in experiments:
-
         summary = df_summary[df_summary['Experiment'] == exp]
 
         RMSE = mean_squared_error(summary['target'], summary['prediction'], squared=False)
         exp_dict = {'RMSE': RMSE, 'NLL': {}}
 
         # If evidential:
-        if summary['Model'][0] == 'evidential':
+        if summary['Model'].iloc[0] == 'evidential':
 
-            evidential_params = torch.stack([torch.Tensor(summary[param]) for param in ['gamma', 'v', 'alpha', 'beta']], dim=1)
+            evidential_params = torch.stack([torch.Tensor(summary[param].to_numpy()) for param in ['gamma', 'v', 'alpha', 'beta']], dim=1)
 
             NIG = NIGLoss(0.0) # Lambda set to 0.0 as only NIG NLL is extracted.
-            exp_dict['NLL'] = float(NIG(evidential_params, torch.Tensor(summary['target']))[1]['NLL'])
+            exp_dict['NLL'] = float(NIG(evidential_params, torch.Tensor(summary['target'].to_numpy()))[1]['NLL'])
             # exp_dict['NLL']['EPI_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i], scale=summary['epistemic'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
             # exp_dict['NLL']['ALEA_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i], scale=summary['aleatoric'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
             # exp_dict['NLL']['COMBINED_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i]*2, scale=summary['epistemic'][i]+summary['aleatoric'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
 
-        if summary['Model'][0] == 'baseline':
+        if summary['Model'].iloc[0] == 'baseline':
 
             # NLL based on mu and sigma predictions
             exp_dict['NLL'] = - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
 
-        performance_dict[exp] = exp_dict
+        #data_type = summary['ID or OOD'].iloc[0]
+        performance_dict[f"{exp}"] = exp_dict
 
     return performance_dict
 
@@ -73,12 +74,11 @@ def get_prediction_summary(loaders_dict, model, exp):
     # looping each dataset (ID or OOD)
     for dataset_type, loaders in loaders_dict.items():
         # dataset_type is definition whether dataset is in our out of distribution
-        # TODO: CHANGE TO TEST INSTEAD OF TRAIN
         evidential_params, model_type = [], []
         num_data = 0
         for idx_batch, batch in enumerate(loaders['test']):
             num_data += len(batch.target)
-            target.extend(batch.target)
+            target.extend(np.array(batch.target).reshape(-1))
             outputs = model(batch)
 
             if model.model_type == 'evidential':
