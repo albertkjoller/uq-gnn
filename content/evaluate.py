@@ -34,16 +34,16 @@ def evidential_prediction(outputs):
     return pred, alea.flatten().tolist(), epi.flatten().tolist()
 
 
-def get_performance(df_summary, experiments):
+def get_performance(df_summary, hue_by, hue_by_list):
 
     performance_dict = {}
     #evaluation_type = 'ID'
 
-    for exp in experiments:
-        summary = df_summary[df_summary['Experiment'] == exp]
+    for hue in hue_by_list:
+        summary = df_summary[df_summary[hue_by] == hue]
 
         RMSE = mean_squared_error(summary['target'], summary['prediction'], squared=False)
-        exp_dict = {'RMSE': RMSE, 'NLL': {}}
+        hue_dict = {'RMSE': RMSE, 'NLL': {}}
 
         # If evidential:
         if summary['Model'].iloc[0] == 'evidential':
@@ -51,7 +51,7 @@ def get_performance(df_summary, experiments):
             evidential_params = torch.stack([torch.Tensor(summary[param].to_numpy()) for param in ['gamma', 'v', 'alpha', 'beta']], dim=1)
 
             NIG = NIGLoss(0.0) # Lambda set to 0.0 as only NIG NLL is extracted.
-            exp_dict['NLL'] = float(NIG(evidential_params, torch.Tensor(summary['target'].to_numpy()))[1]['NLL'])
+            hue_dict['NLL'] = float(NIG(evidential_params, torch.Tensor(summary['target'].to_numpy()))[1]['NLL'])
             # exp_dict['NLL']['EPI_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i], scale=summary['epistemic'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
             # exp_dict['NLL']['ALEA_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i], scale=summary['aleatoric'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
             # exp_dict['NLL']['COMBINED_NLL'] = - torch.mean(torch.stack([Normal(loc=summary['gamma'][i]*2, scale=summary['epistemic'][i]+summary['aleatoric'][i]).log_prob(summary['target'][i]) for i in range(len(summary))]))
@@ -59,10 +59,10 @@ def get_performance(df_summary, experiments):
         if summary['Model'].iloc[0] == 'baseline':
 
             # NLL based on mu and sigma predictions
-            exp_dict['NLL'] = - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
+            hue_dict['NLL'] = - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
 
         #data_type = summary['ID or OOD'].iloc[0]
-        performance_dict[f"{exp}"] = exp_dict
+        performance_dict[f"{hue}"] = hue_dict
 
     return performance_dict
 
@@ -196,10 +196,10 @@ def calibration_plot(df_summary, hue_by, hue_by_list, save_path, plot_name = 'ca
     plt.close()
 
 
-def plot_results(df_summary, experiments, RMSE_NLL_COMBINED = False):
+def plot_results(df_summary, hue_by, hue_by_list, RMSE_NLL_COMBINED = False):
 
     # Getting performance dictionary (NLL and MSE)
-    performance_dict = get_performance(df_summary, experiments)
+    performance_dict = get_performance(df_summary, hue_by, hue_by_list)
     performance_df = pd.DataFrame.from_dict(performance_dict)
 
     # Plotting performance
@@ -281,28 +281,32 @@ def evaluate_model(loaders_dict, models, experiments, args):
         # % correct predictions as a function of increasing confidence interval
         #   - we want a linear trend, so estimated confidence matches expected
         calibration_plot(df_summary, hue_by, hue_by_list, save_path)
+        # generate table
+        latex = plot_results(df_summary, hue_by, hue_by_list)
+        print(latex)
+
 
     # if also comparing across datasets of ID and OOD
     #   - not implemented for more than two
     elif len(set(args.id_ood)) != 1:
         added_hue_by = 'ID or OOD'
         separator = ', '
-        column_name = hue_by + separator + added_hue_by
-        df_summary[column_name] = ''
+        new_column_name = hue_by + separator + added_hue_by
+        df_summary[new_column_name] = ''
         new_values = []
         for hue_by_ele in hue_by_list:
             for id_ood in list(set(args.id_ood)):
                 # filtering
                 indices = np.multiply(df_summary[hue_by] == hue_by_ele, df_summary[added_hue_by] == id_ood)
                 # generating new hue by
-                df_summary.loc[indices, column_name] = hue_by_ele + separator + id_ood
+                df_summary.loc[indices, new_column_name] = hue_by_ele + separator + id_ood
                 # saving
                 new_values.append(hue_by_ele + separator + id_ood)
         #hue_by = column_name
         #hue_by_list = new_values
 
-        error_percentile_plot(df_summary, column_name, new_values, save_path, plot_name='error_percentile_ID_OOD')
-        calibration_plot(df_summary, column_name, new_values, save_path, plot_name='calibration_ID_OOD')
+        error_percentile_plot(df_summary, new_column_name, new_values, save_path, plot_name='error_percentile_ID_OOD')
+        calibration_plot(df_summary, new_column_name, new_values, save_path, plot_name='calibration_ID_OOD')
 
         # entropy of in and out of distribution boxplot
         #   - a difference in entropy between in and out is desired
@@ -311,11 +315,10 @@ def evaluate_model(loaders_dict, models, experiments, args):
         # histogram of entropy from in and out of distribution data
         in_ood_hist(df_summary, hue_by, hue_by_list, save_path)
 
-
+        latex = plot_results(df_summary, new_column_name, new_values)
+        print(latex)
     # histogram of entropy from in and out of distribution data
     # in_ood_hist(df_summary, hue_by, hue_by_list)
-
-    latex = plot_results(df_summary, experiments)
 
 
     # RMSE, NIG_nll = errors
@@ -329,7 +332,7 @@ def evaluate_model(loaders_dict, models, experiments, args):
 
     # PHIL: Make table func
 
-    return latex
+    #return latex
 
 
 
