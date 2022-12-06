@@ -177,6 +177,7 @@ if __name__ == '__main__':
         except Exception as e:
             print('Include --save_path, or folder already exists')
         # Load data and device
+        # todo: this causes error: 'visualization': dataset['train']
         loaders = load_data(args)
         device = torch.device(args.device)
 

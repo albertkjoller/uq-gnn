@@ -134,11 +134,12 @@ def get_prediction_summary(loaders_dict, model, exp):
 
 
 
-def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path):
+def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path, plot_name='error_percentile'):
 
     # general dataframe
     df_cutoff = pd.DataFrame(columns=[hue_by, "Percentile", "RMSE"])    # from low to high conf
     percentiles = np.arange(100) / 100.
+    # if id and ood datasets, then also create one separate for them
     # for exp, summary in summary_dict.items():
     for hue in hue_by_list:
         single_df_summary = df_summary[df_summary[hue_by]==hue]
@@ -155,13 +156,13 @@ def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path):
 
     # made for plotitng multiple models confidence
     sns.lineplot(x="Percentile", y="RMSE", hue=hue_by, data=df_cutoff.reset_index())
-    plt.savefig(os.path.join(save_path, f"error_percentile.png"))
+    plt.savefig(os.path.join(save_path, f"{plot_name}.png"))
     #plt.show()
     plt.close()
 
 
 
-def calibration_plot(df_summary, hue_by, hue_by_list, save_path):
+def calibration_plot(df_summary, hue_by, hue_by_list, save_path, plot_name = 'calibration'):
     # general dataframe
     df_calibration = pd.DataFrame(columns=[hue_by, "Expected Conf.", "Observed Conf."])
     # from low to high conf
@@ -190,7 +191,7 @@ def calibration_plot(df_summary, hue_by, hue_by_list, save_path):
     # made for plotitng multiple models confidence
     sns.lineplot(x="Expected Conf.", y="Observed Conf.", data=df_truth, label='Ideal calibration', color='black', linestyle='--')
     sns.lineplot(x="Expected Conf.", y="Observed Conf.", hue=hue_by, data=df_calibration.reset_index())
-    plt.savefig(os.path.join(save_path, f"calibration.png"))
+    plt.savefig(os.path.join(save_path, f"{plot_name}.png"))
     #plt.show()
     plt.close()
 
@@ -229,7 +230,7 @@ def in_ood_hist(df_summary, hue_by, hue_by_list, save_path):
     # general dataframe
     for hue in hue_by_list:
         single_df_summary = df_summary[df_summary[hue_by] == hue]
-        sns.histplot(x='Entropy', hue="ID or OOD", data=single_df_summary, kde=True)
+        sns.histplot(x='Entropy', hue="ID or OOD", data=single_df_summary.reset_index(), kde=True)
         plt.savefig(os.path.join(save_path, f"hist_{hue}.png"))
         #plt.show()
         plt.close()
@@ -246,15 +247,8 @@ def evaluate_model(loaders_dict, models, experiments, args):
         df_single_summary = pd.DataFrame.from_dict(summary)
         df_summary = pd.concat([df_summary, df_single_summary])
 
-    # todo: what if we want to compare hyperparams? like e.g. lambda, then not implemented
-    if len(set(list(df_summary['Model']))) == 1: # if 1 model type then comparing multiple experiments
-        hue_by = 'Experiment' # experiment name will differentiate
-        hue_by_list = list(set(list(df_summary['Experiment'])))
-    else: # else comparing accross different models
-        hue_by = 'Model' # model type will differentiate
-        hue_by_list = list(set(list(df_summary['Model'])))
 
-    # generating save folder
+    # generating save folder, creating 'eval_...' + unique name
     words = []
     for exp in experiments:
         words.extend(re.split(' |_', exp))
@@ -265,18 +259,51 @@ def evaluate_model(loaders_dict, models, experiments, args):
         print('Save folder already exists')
     save_path = 'results' + f"/{save_name}"
 
+    # if 1 model type then comparing multiple experiments for that
+    #   - this is usually not the case, and cannot create a variance based on seed
+    if len(set(list(df_summary['Model']))) == 1:
+        hue_by = 'Experiment'  # experiment name will differentiate
+        hue_by_list = list(set(list(df_summary['Experiment'])))
+    # if not, then comparing across different models
+    #   - having the same model with different seeds will create a variance on plots
+    else:
+        hue_by = 'Model'  # model type will differentiate
+        hue_by_list = list(set(list(df_summary['Model'])))
 
-    # RMSE as a function of percentile included sigma values
-    #   - including sigma's from all, to only highest sigma's (based on %)
-    #   - desire constant/inverse trend, no fluctuations between sigma and error
-    error_percentile_plot(df_summary, hue_by, hue_by_list, save_path)
+    # NOTE: we can vary experiment name, model and dataset + whether ID or OOD
+    # if not comparing across dataset
+    if len(set(args.id_ood)) == 1:
+        # RMSE as a function of percentile included sigma values
+        #   - including sigma's from all, to only highest sigma's (based on %)
+        #   - desire constant/inverse trend, no fluctuations between sigma and error
+        error_percentile_plot(df_summary, hue_by, hue_by_list, save_path)
 
-    # % correct predictions as a function of increasing confidence interval
-    #   - we want a linear trend, so estimated confidence matches expected
-    calibration_plot(df_summary, hue_by, hue_by_list, save_path)
+        # % correct predictions as a function of increasing confidence interval
+        #   - we want a linear trend, so estimated confidence matches expected
+        calibration_plot(df_summary, hue_by, hue_by_list, save_path)
 
-    # id multiple datasets of ID and OOD
-    if len(set(args.id_ood)) != 1:
+    # if also comparing across datasets of ID and OOD
+    #   - not implemented for more than two
+    elif len(set(args.id_ood)) != 1:
+        added_hue_by = 'ID or OOD'
+        separator = ', '
+        column_name = hue_by + separator + added_hue_by
+        df_summary[column_name] = ''
+        new_values = []
+        for hue_by_ele in hue_by_list:
+            for id_ood in list(set(args.id_ood)):
+                # filtering
+                indices = np.multiply(df_summary[hue_by] == hue_by_ele, df_summary[added_hue_by] == id_ood)
+                # generating new hue by
+                df_summary.loc[indices, column_name] = hue_by_ele + separator + id_ood
+                # saving
+                new_values.append(hue_by_ele + separator + id_ood)
+        #hue_by = column_name
+        #hue_by_list = new_values
+
+        error_percentile_plot(df_summary, column_name, new_values, save_path, plot_name='error_percentile_ID_OOD')
+        calibration_plot(df_summary, column_name, new_values, save_path, plot_name='calibration_ID_OOD')
+
         # entropy of in and out of distribution boxplot
         #   - a difference in entropy between in and out is desired
         in_ood_boxplot(df_summary, hue_by, hue_by_list, save_path)
