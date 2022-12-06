@@ -97,9 +97,8 @@ And considering the 1D toy example, you can evaluatte an experiment by appending
 ```
 And in order to add another experiment or dataset in the evaluation, simply replicate the line above and adjust the necessary parameters. Below is an example of appending the same model but trained on a different seed,
 
-As an example, to add another TOY1D model which has trained on a different seed, add the following:
+As an example, to add another TOY1D model which has trained on a different seed, add the following (*Note: experiment_name has changed*):
 
 ```
 --experiment_name 1D_model_2 --model TOY1D --dataset TOY1D --id_ood ID
 ```
-*Note: experiment_name has changed*
