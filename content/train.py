@@ -5,6 +5,7 @@ from collections import defaultdict
 
 import numpy as np
 from tqdm import trange
+from content.modules.Losses import RMSELoss
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -17,7 +18,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
     # Setup tensorboard
     writer = SummaryWriter(Path(f"{tensorboard_logdir}")/tensorboard_filename)
 
-    # unpacking loaders
+    # unpacking loadersluate    
     train_loader, val_loader, test_loader = tuple(dataloaders.values())
 
     # Setup parameters
@@ -25,7 +26,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
 
     # Setup storage information
     current_best, info_str = np.inf, ""
-    train_lss, val_lss = np.zeros(epochs), np.zeros(epochs // val_every_step)
+    train_lss, val_lss, val_rmse = np.zeros(epochs), np.zeros(epochs // val_every_step), np.zeros(epochs // val_every_step)
 
     with trange(epochs) as t:
         val_step = 0
@@ -36,7 +37,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
                     # Change network mode
                     model.eval()
                     # Evaluate on validation batch
-                    val_loss = evaluate(model, val_loader, writer, epoch, loss_function, experiment_name)
+                    val_loss, rmse = evaluate(model, val_loader, writer, epoch, loss_function, experiment_name)
 
                     # Save best model on validation set
                     if val_loss <= current_best:
@@ -47,6 +48,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
                         info_str += f"\t Validation Loss: {current_best}"
 
                     val_lss[val_step] = np.mean(val_loss)
+                    val_rmse[val_step] = np.mean(rmse)
                     # Switch back to training mode
                     model.train()
                 val_step += 1
@@ -78,7 +80,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
                     writer.add_scalar(f'TRAIN/{name}', np.mean(loss_), epoch)
 
             # Print status
-            t.set_description_str(f'Training Loss: {train_lss[epoch-1]:.3f} \t| \t Validation Loss: {val_lss[val_step-1]:.3f} | Progress')
+            t.set_description_str(f'Train Loss: {train_lss[epoch-1]:.3f} \t| \t Val Loss: {val_lss[val_step-1]:.3f} \t| \t Val RMSE: {val_rmse[val_step-1]:.3f} | Progress')
 
     # Close tensorboard
     writer.close()
@@ -86,7 +88,8 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
     return model, best_epoch
 
 def evaluate(model, data, writer, epoch, loss_function, experiment_name):
-
+    compute_rmse = RMSELoss()
+    rmse = []
     if '1D' in model.__class__.__name__:
         save_path = Path(f"results/{experiment_name}")
         if 'Evidential' in model.__class__.__name__:
@@ -104,10 +107,11 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
         for idx_batch, batch in enumerate(data):
             # Compute return of model
             outputs = model(batch)
-
+            # computing rmse
+            (name, error), _ = compute_rmse(outputs[:, 0].reshape(-1, 1), batch.target)
+            rmse.append(error)
             # Compute loss
             (loss_name, loss), xtra_losses = loss_function(outputs, batch.target)
-
             batch_loss.append(loss.item())
             if loss_function.__class__.__name__ == "NIGLoss":
                 for name, loss_ in xtra_losses.items():
@@ -123,14 +127,15 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
         for idx_batch, batch in enumerate(data):
             # Compute return of model
             outputs = model(batch)
-
+            # computing rmse
+            (name, error), _ = compute_rmse(outputs[:, 0].reshape(-1, 1), batch.target)
+            rmse.append(error)
             # Compute loss
             (loss_name, loss), xtra_losses = loss_function(outputs, batch.target)
-
             batch_loss.append(loss.item())
         loss = np.mean(batch_loss)
         writer.add_scalar(f'VALIDATION/{loss_name}', loss, epoch)
         if loss_function.__class__.__name__ == "NIGLoss":
             for name, loss_ in batch_xtra_losses.items():
                 writer.add_scalar(f'VALIDATION/{name}', np.mean(loss_), epoch)
-    return loss
+    return loss, rmse

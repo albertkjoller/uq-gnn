@@ -413,7 +413,7 @@ def synthetic_dataset(path='data/', device='cpu'):
         graph_data[graph_idx]['graph_idx'] = graph_idx  # for reference
         # EDGE RELATED:
         graph_data[graph_idx]['node_coordinates'] = graph_coords[
-            torch.unique(data[torch.where(data[:, -1] == graph_idx)[0], 0]).to(torch.long)].to(torch.float64).to(
+            torch.unique(data[torch.where(data[:, -1] == graph_idx)[0], 0]).to(torch.long)].double().to(
             torch.device(device))
         # Edge list - fully connected graphs thus perform possible combinations
         graph_data[graph_idx]['edge_list'] = torch.tensor(list(combinations(graph_data[graph_idx]['node_list'], 2))).to(
