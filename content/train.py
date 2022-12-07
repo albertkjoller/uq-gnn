@@ -18,7 +18,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
     # Setup tensorboard
     writer = SummaryWriter(Path(f"{tensorboard_logdir}")/tensorboard_filename)
 
-    # unpacking loaders
+    # unpacking loadersluate    
     train_loader, val_loader, test_loader = tuple(dataloaders.values())
 
     # Setup parameters
