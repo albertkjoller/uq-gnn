@@ -199,7 +199,6 @@ if __name__ == '__main__':
         if args.save_path != '':
             save_model(model, args)
 
-    # todo: run and evaluate argument?
     elif args.mode == 'evaluation':
         models = {}
         loaders_dict = {}
@@ -217,6 +216,8 @@ if __name__ == '__main__':
             # dataset
             loaders_dict[args.id_ood[idx]] = load_data(curr_args)
 
-        evaluate_model(loaders_dict=loaders_dict, models=models, experiments=args.experiment_name, args = args)
+        results_ = evaluate_model(loaders_dict=loaders_dict, models=models, experiments=args.experiment_name, args = args)
+        print(results_)
+
 
 
