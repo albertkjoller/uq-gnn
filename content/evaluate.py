@@ -60,6 +60,7 @@ def get_performance(df_summary, hue_by, hue_by_list):
         if summary['Model'].iloc[0] == 'baseline':
 
             # NLL based on mu and sigma predictions
+
                     # Compute loss
             loss = GaussianNLLLoss()
             nll_loss = loss(input=torch.Tensor(summary['prediction']), target=torch.Tensor(summary['target']), var=torch.Tensor(summary['epistemic']))

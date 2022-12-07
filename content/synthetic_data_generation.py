@@ -19,10 +19,14 @@ def U(x):
     '''
     a = 500000
     b = 4000
-    return ((a/(x**12)) - (b/(x**6)))
+    out = ((a/(x**12)) - (b/(x**6)))
+    if out >= 1000:
+        return 1000
+    else:
+        return out
 
 
-def get_molecule(mol_size=4, node_nr_start=0, seed=42, center_box=(-5,5)):
+def get_molecule(mol_size=4, node_nr_start=0, seed=42, center_box=(-5,5), graph_idx=0):
     '''
     Takes molecule size and number of molecules and returns an edgelist with n_mols number of
     disconnected cliques of size mol_size. If we want to run this multiple times, calculate the number of nodes
@@ -50,47 +54,54 @@ def get_molecule(mol_size=4, node_nr_start=0, seed=42, center_box=(-5,5)):
     edges = torch.tensor([[col1, col2, col3] for ((col1, col2, col3)) in edges])
     predictor = torch.zeros(len(edges)) + torch.sum(torch.tensor(predictor))
     edges = torch.hstack((edges,predictor.unsqueeze(1)))
-    graph_coords = torch.zeros(len(edges)) + torch.tensor(seed)
-    edges = torch.hstack((edges, graph_coords.unsqueeze(1)))
+    graph_idx = torch.zeros(len(edges)) + torch.tensor(graph_idx)
+    edges = torch.hstack((edges, graph_idx.unsqueeze(1)))
     node_nr_end = int(edges.max(0)[0][0])+1
     return edges, node_nr_end, blob
 
 
 def create_molecules(mol_sizes, filename, center_box=(-5, 5)):
+    count = 0
     for idx, mol_size in enumerate(mol_sizes):
-        if idx == 0:
-            edges, node_nr_end, coords = get_molecule(int(mol_size), node_nr_start=idx, seed=idx, center_box=center_box)
+        if count == 0:
+            edges, node_nr_end, coords = get_molecule(int(mol_size), node_nr_start=count, seed=idx,
+                                                      center_box=center_box, graph_idx=count)
+            if torch.sum(edges[:, 2] < 2)!=0:
+                continue
             coordinates = coords
             edge_list = edges
+            count+=1
+            true_end = node_nr_end
         else:
-            edges, node_nr_end, coords = get_molecule(int(mol_size), node_nr_start=node_nr_end, seed=idx,
-                                                      center_box=center_box)
+            edges, node_nr_end, coords = get_molecule(int(mol_size), node_nr_start=true_end, seed=idx,
+                                                      center_box=center_box, graph_idx=count)
+            if torch.sum(edges[:, 2] < 2)!=0:
+                continue
             coordinates = torch.vstack((coordinates, coords))
             edge_list = torch.vstack((edge_list, edges))
+            count+=1
+            true_end = node_nr_end
 
     edge_np = edge_list.numpy()  # convert to Numpy array
     df = pd.DataFrame(edge_np)  # convert to a dataframe
-    df.to_csv(f'{filename}_edgelist.csv', index=False)  # save to file
+    df.to_csv(f'{filename}edgelist.csv', index=False)  # save to file
 
     coords_np = coordinates.numpy()  # convert to Numpy array
     df_coords = pd.DataFrame(coords_np)  # convert to a dataframe
-    df_coords.to_csv(f'{filename}_coords.csv', index=False)  # save to file
+    df_coords.to_csv(f'{filename}coords.csv', index=False)  # save to file
 
 """
-Below we create a training set where nodes are sampled with a centerbox of -5,5. After that we create two OOD
+Below we create a training set where nodes are sampled with a centerbox of -2,2. After that we create two OOD
 test sets; the first test set, the nodes are sampled with a centerbox of -0.5,0.5 and the in second
 test set, the nodes are sampled with a centerbox of -10,10.
 """
 if __name__== '__main__':
-    mol_sizes = np.hstack((np.zeros(100)+3,np.zeros(100)+4))
-    mol_sizes = np.hstack((mol_sizes, np.zeros(200)+5))
+    mol_sizes = np.hstack((np.zeros(200)+3,np.zeros(200)+4))
+    mol_sizes = np.hstack((mol_sizes, np.zeros(600)+5))
 
-    #centerbox = (-5,5):
-    create_molecules(mol_sizes,'temp_synth/2', center_box=(-2,2))
+    #centerbox = (-3,3):
+    create_molecules(mol_sizes,'data/SYNTHETIC3/', center_box=(-3,3))
 
-    #centerbox = (-0.5, 0.5):
-    create_molecules(mol_sizes,'temp_synth/0.5', center_box=(-0.5,0.5))
-
-    #centerbox = (-100,100):
-    create_molecules(mol_sizes,'temp_synth/10', center_box=(-10,10))
+    #centerbox = (-4,4):
+    create_molecules(mol_sizes,'data/SYNTHETIC4/', center_box=(-4,4))
 
