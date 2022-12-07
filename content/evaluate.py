@@ -65,7 +65,7 @@ def get_performance(df_summary, hue_by, hue_by_list):
             loss = GaussianNLLLoss()
             nll_loss = loss(input=torch.Tensor(summary['prediction']), target=torch.Tensor(summary['target']), var=torch.Tensor(summary['epistemic']))
             # return ('GAUSSIANNLL', torch.sqrt(nll_loss.mean())), {}
-            hue_dict['NLL'] = torch.sqrt(nll_loss.mean()) # - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
+            hue_dict['NLL'] = torch.sqrt(nll_loss.mean()).item() # - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
 
         #data_type = summary['ID or OOD'].iloc[0]
         performance_dict[f"{hue}"] = hue_dict
@@ -229,7 +229,7 @@ def plot_results(df_summary, hue_by, hue_by_list, RMSE_NLL_COMBINED = False):
                 ax.bar_label(container, fmt='%.2f')
 
     #table = performance_df.style.to_latex()
-    table = performance_df
+    table = performance_df.to_latex()
     return table
 
 
@@ -349,17 +349,16 @@ def evaluate_model(loaders_dict, models, experiments, args):
 
 
 
-'''
+
 if __name__ == '__main__':
 
-    experiment_name = 'BASELINE_debug/baseline'
+    experiment_name = 'TOY1D-lambda0.001'
 
     # when running with args
-    make_gif(f"../results/{experiment_name}/BASELINE", 'baseline.gif', duration=100)
-    #make_gif(f"../results/{experiment_name}/EPISTEMIC", 'epistemic.gif', duration=100)
+    make_gif(f"../results/{experiment_name}/ALEATORIC", 'aleatoric', duration=100)
+    make_gif(f"../results/{experiment_name}/EPISTEMIC", 'epistemic.gif', duration=100)
     make_gif(f"../results/{experiment_name}/PARAMS", 'parameters.gif', duration=100)
-
-
+"""
 
 
 
@@ -395,7 +394,7 @@ def error_conf_plot(summary, hue_by):
     sns.lineplot(x="Expected Conf.", y="RMSE", hue=hue_by, data=df_cutoff.reset_index())
     # todo save plot
 
-'''
+"""
 
 
 
