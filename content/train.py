@@ -68,7 +68,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
 
                 # Store batch loss for epoch
                 batch_loss.append(loss.item())
-                if loss_function.__class__.__name__ == "NIGLoss":
+                if loss_function.__class__.__name__ in ["NIGLoss", 'GAUSSIANNLLLoss']:
                     for name, loss_ in xtra_losses.items():
                         batch_xtra_losses[name] += [loss_.item()]
 
@@ -109,7 +109,7 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
             outputs = model(batch)
             # computing rmse
             (name, error), _ = compute_rmse(outputs[:, 0].reshape(-1, 1), batch.target)
-            rmse.append(error)
+            rmse.append(error.item())
             # Compute loss
             (loss_name, loss), xtra_losses = loss_function(outputs, batch.target)
             batch_loss.append(loss.item())
@@ -129,13 +129,15 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
             outputs = model(batch)
             # computing rmse
             (name, error), _ = compute_rmse(outputs[:, 0].reshape(-1, 1), batch.target)
-            rmse.append(error)
+            rmse.append(error.item())
             # Compute loss
             (loss_name, loss), xtra_losses = loss_function(outputs, batch.target)
             batch_loss.append(loss.item())
+            for name, loss_ in xtra_losses.items():
+                batch_xtra_losses[name] += [loss_.item()]
         loss = np.mean(batch_loss)
         writer.add_scalar(f'VALIDATION/{loss_name}', loss, epoch)
-        if loss_function.__class__.__name__ == "NIGLoss":
+        if loss_function.__class__.__name__ == "GAUSSIANNLLLoss":
             for name, loss_ in batch_xtra_losses.items():
                 writer.add_scalar(f'VALIDATION/{name}', np.mean(loss_), epoch)
     return loss, rmse

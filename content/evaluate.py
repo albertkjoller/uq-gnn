@@ -144,6 +144,7 @@ def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path, plot_name=
 
     # general dataframe
     df_cutoff = pd.DataFrame(columns=[hue_by, "Percentile", "RMSE"])    # from low to high conf
+    df_cutoff_norm = pd.DataFrame(columns=[hue_by, "Percentile", "RMSE"])
     percentiles = np.arange(100) / 100.
     # if id and ood datasets, then also create one separate for them
     # for exp, summary in summary_dict.items():
@@ -160,15 +161,22 @@ def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path, plot_name=
         #   - average squared errors then root
         mean_error = [np.sqrt(single_df_summary[cutoff:]["Error"].mean()) for cutoff in cutoff_inds]
         df_single_cutoff = pd.DataFrame({hue_by: hue, 'Percentile': percentiles, 'RMSE': mean_error})
+        # normalized
+        df_single_cutoff_norm = pd.DataFrame({hue_by: hue, 'Percentile': percentiles, 'RMSE': mean_error/max(mean_error)})
         df_cutoff = pd.concat([df_cutoff, df_single_cutoff])
+        df_cutoff_norm = pd.concat([df_cutoff_norm, df_single_cutoff_norm])
+
 
     # made for plotitng multiple models confidence
     sns.lineplot(x="Percentile", y="RMSE", hue=hue_by, data=df_cutoff.reset_index())
     plt.savefig(os.path.join(save_path, f"{plot_name}.png"))
     #plt.show()
     plt.close()
-
-
+    # now by normalizing the y axis (divide by max)
+    sns.lineplot(x="Percentile", y="RMSE", hue=hue_by, data=df_cutoff_norm.reset_index())
+    plt.savefig(os.path.join(save_path, f"{plot_name}_norm.png"))
+    #plt.show()
+    plt.close()
 
 def calibration_plot(df_summary, hue_by, hue_by_list, save_path, plot_name = 'calibration'):
     # general dataframe
