@@ -17,14 +17,15 @@ from dgl.data import QM9Dataset
 
 
 class ToyDataset1D:
-    def __init__(self, B: int, N: int, range_, device: torch.device, noise_level: float, visualize_on_load=False,
-                 seed=42):
+
+    def __init__(self, B: int, N: int, range_, device: torch.device, noise_level: float, OOD_boundaries=None, visualize_on_load=False, seed=42):
         # Set seed and device
         self.seed = seed
         torch.manual_seed(seed)
         self.device = device
         self.range_ = range_
         self.noise_level = noise_level
+        self.OOD_boundaries = OOD_boundaries
 
         # Create batches
         self.N = N  # NUMBER OF POINTS
@@ -32,8 +33,6 @@ class ToyDataset1D:
         self.num_batches = N // B  # NUMBER OF BATCHES
 
         self.create_dataset()
-        if visualize_on_load == True:
-            self.visualize_dataset(figsize=(8, 6))
 
         class BATCH:  # D
             def __init__(self, data_, target_):
@@ -50,15 +49,19 @@ class ToyDataset1D:
         self.unbatched_data = self.data
         self.data = list(zip(self.data['data'], self.data['target']))
 
+        if visualize_on_load == True:
+            self.visualize_dataset()
+
     def create_dataset(self, ):
         self.data = {}
         order_ = torch.randperm(self.N)  # shuffle data
-        self.data['data'] = torch.FloatTensor(self.N).uniform_(self.range_[0], self.range_[1])[order_].reshape(-1,
-                                                                                                               self.B,
-                                                                                                               1).to(
-            self.device)
-        self.data['target'] = self.data['data'] ** 3 + (
-                    torch.randn(self.N, 1).reshape(-1, self.B, 1) * self.noise_level).to(self.device)
+        if self.OOD_boundaries != None:
+            self.data['data'] = torch.concat([torch.FloatTensor(self.N // 2).uniform_(self.range_[0], self.OOD_boundaries[0]), torch.FloatTensor(self.N // 2).uniform_(self.OOD_boundaries[1], self.range_[1])])
+            self.data['data'] = self.data['data'][order_].reshape(-1, self.B, 1).to(self.device)
+        else:
+            self.data['data'] = torch.FloatTensor(self.N).uniform_(self.range_[0], self.range_[1])[order_].reshape(-1, self.B, 1).to(self.device)
+        self.data['target'] = self.data['data'] ** 3 + (torch.randn(self.N, 1).reshape(-1, self.B, 1) * self.noise_level).to(self.device)
+
 
     def visualize_dataset(self, ):
         # plot data

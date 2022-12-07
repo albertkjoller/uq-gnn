@@ -15,14 +15,14 @@ def retrieve_dataset(args):
     device = torch.device(args.device)
     if args.dataset == 'TOY1D':
         return {'train': ToyDataset1D(B=args.batch_size, N=args.N_points, range_=(-4, 4), noise_level=args.toy_noise_level, device=device),
-                'val': ToyDataset1D(B=args.batch_size, N=args.N_points, range_=(-6, 6), noise_level=args.toy_noise_level, device=device)}
+                'val': ToyDataset1D(B=args.batch_size, N=args.N_points, range_=(-4, 4), noise_level=args.toy_noise_level, device=device)}
+    elif args.dataset == 'TOY1D-OOD':
+        return {'test': ToyDataset1D(B=args.batch_size, N=args.N_points, range_=(-6, 6), OOD_boundaries=(-4, 4), noise_level=args.toy_noise_level, device=device)}
 
     elif args.dataset == 'QM7':
         return QM7_dataset(path=f"{args.data_dir}/QM7/qm7.mat", device=device)
     elif 'SYNTHETIC' in args.dataset:
         return synthetic_dataset(path = f"{args.data_dir}/{args.dataset}/", device=device)
-        #raise NotImplementedError("TODO: fix path to dataset - what is this?")
-        #return synthetic_dataset(f"{args.data_dir}/SYNTHETIC/...") # TODO: ME!
 
 def load_data(args):
     """
@@ -45,10 +45,13 @@ def load_data(args):
 
         if args.dataset == 'TOY1D': # TODO: add test as ARON said?
             loaders = {'train': dataset['train'].batches, 'val': dataset['val'], 'test': dataset['val'].batches, 'visualization': dataset['train']}
+        elif args.dataset == 'TOY1D-OOD':
+            loaders = {'train': None, 'val': None, 'test': dataset['test'].batches}
         else:
             print("\nCREATING DATALOADER OBJECTS...")
             # Construct loaders
             graph_info, graph_data = dataset
+            # you can adjust the test and val size here
             loaders = get_loaders(graph_info, graph_data, batch_size=args.batch_size, test_size=0.2, val_size=0.2,
                                   device=torch.device(args.device), random_state=args.seed, shuffle=True)
 

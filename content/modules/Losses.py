@@ -61,9 +61,9 @@ class RMSELoss:
 
     def __call__(self, mu, y):
         self.mu = mu.reshape(-1,1)
-
+        self.y = y.reshape(-1,1)
         # Get losses
-        mse_loss = (self.mu - y)**2
+        mse_loss = (self.mu - self.y)**2
         # Compute total loss
         return ('RMSE', torch.sqrt(mse_loss.mean())), {}
 
