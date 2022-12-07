@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 from content.modules.Losses import NIGLoss
+
 import re
 from torch.nn import GaussianNLLLoss
 
@@ -42,7 +43,6 @@ def get_performance(df_summary, hue_by, hue_by_list):
 
     for hue in hue_by_list:
         summary = df_summary[df_summary[hue_by] == hue]
-
         RMSE = mean_squared_error(summary['target'], summary['prediction'], squared=False)
         hue_dict = {'RMSE': RMSE, 'NLL': {}}
 
@@ -153,9 +153,11 @@ def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path, plot_name=
         single_df_summary = single_df_summary.sort_values("epistemic", ascending=False)
         cutoff_inds = (percentiles * single_df_summary.shape[0]).astype(int)
         # the error, RMSE
-        single_df_summary["Error"] = np.abs(single_df_summary["target"] - single_df_summary["prediction"])
+        # first error and squaring
+        single_df_summary["Error"] = (single_df_summary["target"] - single_df_summary["prediction"])**2
         # take mean RMSE for cutoffs of higher uncertainty
-        mean_error = [single_df_summary[cutoff:]["Error"].mean() for cutoff in cutoff_inds]
+        #   - average squared errors then root
+        mean_error = [np.sqrt(single_df_summary[cutoff:]["Error"].mean()) for cutoff in cutoff_inds]
         df_single_cutoff = pd.DataFrame({hue_by: hue, 'Percentile': percentiles, 'RMSE': mean_error})
         df_cutoff = pd.concat([df_cutoff, df_single_cutoff])
 
@@ -307,9 +309,6 @@ def evaluate_model(loaders_dict, models, experiments, args):
                 df_summary.loc[indices, new_column_name] = hue_by_ele + separator + id_ood
                 # saving
                 new_values.append(hue_by_ele + separator + id_ood)
-        #hue_by = column_name
-        #hue_by_list = new_values
-
         error_percentile_plot(df_summary, new_column_name, new_values, save_path, plot_name='error_percentile_ID_OOD')
         calibration_plot(df_summary, new_column_name, new_values, save_path, plot_name='calibration_ID_OOD')
 
