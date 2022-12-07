@@ -51,6 +51,7 @@ def load_data(args):
             print("\nCREATING DATALOADER OBJECTS...")
             # Construct loaders
             graph_info, graph_data = dataset
+            # you can adjust the test and val size here
             loaders = get_loaders(graph_info, graph_data, batch_size=args.batch_size, test_size=0.2, val_size=0.2,
                                   device=torch.device(args.device), random_state=args.seed, shuffle=True)
 
