@@ -60,14 +60,19 @@ def get_molecule(mol_size=4, node_nr_start=0, seed=42, center_box=(-5,5), graph_
     return edges, node_nr_end, blob
 
 
-def create_molecules(mol_sizes, filename, center_box=(-5, 5)):
+def create_molecules(mol_sizes, filename, center_box=(-5, 5), larger=False):
     count = 0
     for idx, mol_size in enumerate(mol_sizes):
         if count == 0:
             edges, node_nr_end, coords = get_molecule(int(mol_size), node_nr_start=count, seed=idx,
                                                       center_box=center_box, graph_idx=count)
-            if torch.sum(edges[:, 2] < 2)!=0:
-                continue
+
+            if larger:
+                if torch.sum(edges[:, 2] < 4) != 0:
+                    continue
+            else:
+                if torch.sum(edges[:, 2] < 2.3)!=0 or torch.sum(edges[:, 2] > 4)!=0:
+                    continue
             coordinates = coords
             edge_list = edges
             count+=1
@@ -75,7 +80,7 @@ def create_molecules(mol_sizes, filename, center_box=(-5, 5)):
         else:
             edges, node_nr_end, coords = get_molecule(int(mol_size), node_nr_start=true_end, seed=idx,
                                                       center_box=center_box, graph_idx=count)
-            if torch.sum(edges[:, 2] < 2)!=0:
+            if torch.sum(edges[:, 2] < 2.3)!=0:
                 continue
             coordinates = torch.vstack((coordinates, coords))
             edge_list = torch.vstack((edge_list, edges))
@@ -100,8 +105,8 @@ if __name__== '__main__':
     mol_sizes = np.hstack((mol_sizes, np.zeros(600)+5))
 
     #centerbox = (-3,3):
-    create_molecules(mol_sizes,'data/SYNTHETIC3/', center_box=(-3,3))
+    create_molecules(mol_sizes,'data/SYNTHETIC3/', center_box=(-3,3), larger=False)
 
     #centerbox = (-4,4):
-    create_molecules(mol_sizes,'data/SYNTHETIC4/', center_box=(-4,4))
+    create_molecules(mol_sizes,'data/SYNTHETIC4/', center_box=(-5,5), larger=True)
 
