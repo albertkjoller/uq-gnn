@@ -4,7 +4,7 @@ import numpy as np
 
 
 from content.modules.Datasets import ToyDataset1D, QM7_dataset, synthetic_dataset, get_loaders
-from content.modules.GNNModels import EvidentialToyModel1D, EvidentialGNN3D, BaselineToyModel1D, BaselineGNN3D
+from content.modules.GNNModels import EvidentialToyModel1D, EvidentialGNN3D, BaselineToyModel1D, BaselineGNN3D, ABaselineGNN3D, A2BaselineGNN3D
 from content.modules.Losses import RMSELoss, NIGLoss, GAUSSIANNLLLoss
 
 def retrieve_dataset(args):
@@ -52,7 +52,7 @@ def load_data(args):
             # Construct loaders
             graph_info, graph_data = dataset
             # you can adjust the test and val size here
-            loaders = get_loaders(graph_info, graph_data, batch_size=args.batch_size, test_size=0.7, val_size=0.2,
+            loaders = get_loaders(graph_info, graph_data, batch_size=args.batch_size, test_size=0.2, val_size=0.2,
                                   device=torch.device(args.device), random_state=args.seed, shuffle=True)
 
             # Save loaders
@@ -75,6 +75,10 @@ def get_model_specifications(args):
         model = BaselineGNN3D(device=torch.device(args.device))
     elif args.model == 'GNN3D':
         model = EvidentialGNN3D(device=torch.device(args.device))
+    elif args.model == 'DEBUG3D':
+        model = ABaselineGNN3D(device=torch.device(args.device))
+    elif args.model == 'DEBUG3D2':
+        model = A2BaselineGNN3D(device=torch.device(args.device))
     else:
         raise NotImplementedError("Specified model is currently not implemented.")
 

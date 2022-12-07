@@ -109,7 +109,7 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
             outputs = model(batch)
             # computing rmse
             (name, error), _ = compute_rmse(outputs[:, 0].reshape(-1, 1), batch.target)
-            rmse.append(error)
+            rmse.append(error.item())
             # Compute loss
             (loss_name, loss), xtra_losses = loss_function(outputs, batch.target)
             batch_loss.append(loss.item())
@@ -129,7 +129,7 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
             outputs = model(batch)
             # computing rmse
             (name, error), _ = compute_rmse(outputs[:, 0].reshape(-1, 1), batch.target)
-            rmse.append(error)
+            rmse.append(error.item())
             # Compute loss
             (loss_name, loss), xtra_losses = loss_function(outputs, batch.target)
             batch_loss.append(loss.item())
