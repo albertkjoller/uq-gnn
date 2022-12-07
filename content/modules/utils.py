@@ -81,7 +81,9 @@ def get_model_specifications(args):
         model = A2BaselineGNN3D(device=torch.device(args.device))
     # if you are testing a model, import it here:
     elif args.model == 'test':
-        model = BaselineQ7_test(device=torch.device(args.device))
+        #model = Baseline_Q7_test(device=torch.device(args.device))
+        model = Evidential_Q7_test(device=torch.device(args.device))
+
     else:
         raise NotImplementedError("Specified model is currently not implemented.")
 
