@@ -10,6 +10,7 @@ import pandas as pd
 import torch
 from content.modules.Losses import NIGLoss
 import re
+from torch.nn import GaussianNLLLoss
 
 # Found here: https://www.blog.pythonlibrary.org/2021/06/23/creating-an-animated-gif-with-python/
 def make_gif(img_dir, filename, duration=150):
@@ -59,7 +60,13 @@ def get_performance(df_summary, experiments):
         if summary['Model'][0] == 'baseline':
 
             # NLL based on mu and sigma predictions
-            exp_dict['NLL'] = - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
+            loss = GaussianNLLLoss()
+            nll_loss = loss(input=torch.Tensor(summary['prediction']), target=torch.Tensor(summary['target']),
+                            var=torch.Tensor(summary['epistemic']))
+            # return ('GAUSSIANNLL', torch.sqrt(nll_loss.mean())), {}
+
+            exp_dict['NLL'] = torch.sqrt(nll_loss.mean())
+            #- np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
 
         performance_dict[exp] = exp_dict
 
