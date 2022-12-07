@@ -95,7 +95,7 @@ class GNNInvariant(torch.nn.Module):
         return out
 
 
-class BaselineGNN3D_synth(torch.nn.Module):
+class BaselineGNN3D(torch.nn.Module):
     """Translation and rotation invariant graph neural network.
 
         Keyword Arguments
