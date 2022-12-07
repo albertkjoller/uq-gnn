@@ -65,7 +65,7 @@ class RMSELoss:
         # Get losses
         mse_loss = (self.mu - self.y)**2
         # Compute total loss
-        return ('RMSE', torch.sqrt(mse_loss.mean())), {}
+        return ('RMSE', torch.sqrt(torch.mean((self.mu - self.y)**2))), {}
 
 
 class GAUSSIANNLLLoss:

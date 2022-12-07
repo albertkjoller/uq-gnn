@@ -164,6 +164,9 @@ if __name__ == '__main__':
 
     # Check if inconsistence within input arguments
     check_assertions(args)
+    # setting seeds
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
 
     # TRAINING MODE
     if args.mode == 'train':
