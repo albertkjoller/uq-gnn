@@ -26,14 +26,14 @@ class NIGLoss:
                                                     evidential_params_[:, 3].reshape(-1, 1)
 
         # Get losses
-        nll_loss = self.NIG_NLL(self.y)
-        reg_loss = self.NIG_REGULARIZER(self.y)
+        nll_loss = self.NIG_NLL()
+        reg_loss = self.NIG_REGULARIZER()
 
         # Compute total loss
         total_loss = nll_loss + (self.lambd_ * reg_loss)
         return ('Loss', total_loss.mean()), {'NLL': nll_loss.mean(), 'REG': reg_loss.mean(), 'RMSE': torch.sqrt(torch.mean((self.gamma - self.y)**2))}
 
-    def NIG_NLL(self, y):
+    def NIG_NLL(self):
         """
         Computes negative log-likelihood of the NIG distribution for a regression target, y. Maximizes model fit.
         Implementation follows Equation 8 in this paper (https://arxiv.org/pdf/1910.02600.pdf)
@@ -47,7 +47,7 @@ class NIGLoss:
 
         return nll
 
-    def NIG_REGULARIZER(self, y):
+    def NIG_REGULARIZER(self):
         """
         Computes regularizing loss on the NIG distribution for a regression target, y. Minimizes evidence on errors by
         scaling the error with the total evidence of the infered posterior.
