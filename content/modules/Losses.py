@@ -42,7 +42,7 @@ class NIGLoss:
         omega = 2 * self.beta * (1 + self.nu)
         nll = 0.5 * torch.log(torch.pi / (self.nu)) \
               - self.alpha * torch.log(omega) \
-              + (self.alpha + 0.5) * torch.log((y-self.gamma)**2 * self.nu + omega) \
+              + (self.alpha + 0.5) * torch.log((self.y-self.gamma)**2 * self.nu + omega) \
               + torch.lgamma(self.alpha) - torch.lgamma(self.alpha + 0.5)
 
         return nll
@@ -53,7 +53,7 @@ class NIGLoss:
         scaling the error with the total evidence of the infered posterior.
         Implementation follows Equation 9 in this paper (https://arxiv.org/pdf/1910.02600.pdf)
         """
-        reg_loss = abs(y - self.gamma) * (2*self.nu + self.alpha)
+        reg_loss = abs(self.y - self.gamma) * (2*self.nu + self.alpha)
         return reg_loss
 
 
