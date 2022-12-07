@@ -106,7 +106,7 @@ class BaselineGNN3D(torch.nn.Module):
                 (default 3)
         """
 
-    def __init__(self, device, state_dim=100, num_message_passing_rounds=3):
+    def __init__(self, device, state_dim=20, num_message_passing_rounds=3):
         super().__init__()
         self.model_type = 'baseline'
 
@@ -118,7 +118,7 @@ class BaselineGNN3D(torch.nn.Module):
         self.edge_dim = 1
         self.output_dim = 2
         self.num_features = 4
-        self.hidden_dim = 100
+        self.hidden_dim = 40
 
         # Message passing networks
         self.message_net = torch.nn.Sequential(
@@ -126,11 +126,11 @@ class BaselineGNN3D(torch.nn.Module):
             torch.nn.Linear(self.state_dim + self.num_features, self.hidden_dim).double(),
             torch.nn.Dropout(0.5),
             torch.nn.Tanh(),
-            torch.nn.Linear(self.hidden_dim, self.hidden_dim).double(),
-            torch.nn.Dropout(0.5),
+            torch.nn.Linear(self.hidden_dim, 150).double(),
+            torch.nn.Dropout(0.2),
             torch.nn.Tanh(),
-            torch.nn.Linear(self.hidden_dim, self.hidden_dim).double(),
-            torch.nn.Dropout(0.5),
+            torch.nn.Linear(150, self.hidden_dim).double(),
+            torch.nn.Dropout(0.8),
             torch.nn.Tanh(),
             torch.nn.Linear(self.hidden_dim, self.state_dim).double(),
             torch.nn.Dropout(0.5),
@@ -230,7 +230,7 @@ class EvidentialGNN3D(torch.nn.Module):
             (default 3)
     """
 
-    def __init__(self, device, state_dim=100, num_message_passing_rounds=3, eps=1e-10):
+    def __init__(self, device, state_dim=20, num_message_passing_rounds=3, eps=1e-10):
         super().__init__()
         self.model_type = 'evidential'
 
@@ -242,7 +242,7 @@ class EvidentialGNN3D(torch.nn.Module):
         self.edge_dim = 1
         self.output_dim = 4
         self.num_features = 4
-        self.hidden_dim = 100
+        self.hidden_dim = 40
 
         # Message passing networks
         self.message_net = torch.nn.Sequential(
@@ -250,11 +250,11 @@ class EvidentialGNN3D(torch.nn.Module):
             torch.nn.Linear(self.state_dim + self.num_features, self.hidden_dim).double(),
             torch.nn.Dropout(0.5),
             torch.nn.Tanh(),
-            torch.nn.Linear(self.hidden_dim, self.hidden_dim).double(),
-            torch.nn.Dropout(0.5),
+            torch.nn.Linear(self.hidden_dim, 150).double(),
+            torch.nn.Dropout(0.2),
             torch.nn.Tanh(),
-            torch.nn.Linear(self.hidden_dim, self.hidden_dim).double(),
-            torch.nn.Dropout(0.5),
+            torch.nn.Linear(150, self.hidden_dim).double(),
+            torch.nn.Dropout(0.8),
             torch.nn.Tanh(),
             torch.nn.Linear(self.hidden_dim, self.state_dim).double(),
             torch.nn.Dropout(0.5),
