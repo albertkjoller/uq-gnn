@@ -63,7 +63,9 @@ def get_performance(df_summary, hue_by, hue_by_list):
 
                     # Compute loss
             loss = GaussianNLLLoss()
-            nll_loss = loss(input=torch.Tensor(summary['prediction']), target=torch.Tensor(summary['target']), var=torch.Tensor(summary['epistemic']))
+            nll_loss = loss(input=torch.Tensor(summary['prediction'].to_numpy()),
+                            target=torch.Tensor(summary['target'].to_numpy()),
+                            var=torch.Tensor(summary['epistemic'].to_numpy()))
             # return ('GAUSSIANNLL', torch.sqrt(nll_loss.mean())), {}
             hue_dict['NLL'] = torch.sqrt(nll_loss.mean()).item()  # - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
 
