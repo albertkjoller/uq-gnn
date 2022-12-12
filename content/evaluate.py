@@ -146,6 +146,7 @@ def get_prediction_summary(loaders_dict, model, exp):
 def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path, plot_name='error_percentile'):
 
     # general dataframe
+    # Proportion of included descending sigma values
     df_cutoff = pd.DataFrame(columns=[hue_by, "Confidence level", "RMSE"])    # from low to high conf
     df_cutoff_norm = pd.DataFrame(columns=[hue_by, "Confidence level", "RMSE"])
     percentiles = np.arange(100) / 100.

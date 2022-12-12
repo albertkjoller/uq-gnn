@@ -999,7 +999,7 @@ class A2BaselineGNN3D(torch.nn.Module):
 
 
 
-class EvidentialQ7(torch.nn.Module):
+class EvidentialQM7(torch.nn.Module):
     """Translation and rotation invariant graph neural network.
 
     Keyword Arguments
