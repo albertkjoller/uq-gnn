@@ -1009,6 +1009,7 @@ class EvidentialQM7(torch.nn.Module):
         num_message_passing_rounds : Number of message passing rounds
             (default 3)
     """
+
     def __init__(self, device, state_dim=32, num_message_passing_rounds=5, eps=1e-10):
         super().__init__()
         self.model_type = 'evidential'

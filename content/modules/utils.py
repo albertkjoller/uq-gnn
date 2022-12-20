@@ -86,6 +86,8 @@ def get_model_specifications(args):
         model = Evidential_Q7_test(device=torch.device(args.device))
     elif args.model == 'testbase':
         model = Baseline_Q7_test(device=torch.device(args.device))
+    elif args.model == 'GNN3D_best':
+        model = EvidentialQ7(device=torch.device(args.device))
 
     else:
         raise NotImplementedError("Specified model is currently not implemented.")

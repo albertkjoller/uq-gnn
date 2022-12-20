@@ -28,10 +28,11 @@ class NIGLoss:
         # Get losses
         nll_loss = self.NIG_NLL()
         reg_loss = self.NIG_REGULARIZER()
+        RMSE = torch.sqrt(torch.mean((self.gamma - self.y)**2))
 
         # Compute total loss
-        total_loss = nll_loss + (self.lambd_ * reg_loss)
-        return ('Loss', total_loss.mean()), {'NLL': nll_loss.mean(), 'REG': reg_loss.mean(), 'RMSE': torch.sqrt(torch.mean((self.gamma - self.y)**2))}
+        total_loss = nll_loss + (self.lambd_ * reg_loss) + 2 * RMSE
+        return ('Loss', total_loss.mean()), {'NLL': nll_loss.mean(), 'REG': reg_loss.mean(), 'RMSE': RMSE}
 
     def NIG_NLL(self):
         """
@@ -81,6 +82,6 @@ class GAUSSIANNLLLoss:
 
         # Compute loss
         loss = GaussianNLLLoss()
-        nll_loss = loss(input=self.mu, target=y, var=self.sigma)
+        nll_loss = loss(input=self.mu, target=self.y, var=self.sigma) + 2*torch.sqrt(torch.mean((self.mu - self.y)**2))
         return ('GAUSSIANNLL', torch.sqrt(nll_loss.mean())), {'RMSE': torch.sqrt(torch.mean((self.mu - self.y)**2))}
 

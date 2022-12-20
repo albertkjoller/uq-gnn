@@ -45,7 +45,8 @@ def get_performance(df_summary, hue_by, hue_by_list):
         summary = df_summary[df_summary[hue_by] == hue]
         RMSE = mean_squared_error(summary['target'], summary['prediction'], squared=False)
         sigma = summary['epistemic'].mean()
-        hue_dict = {'RMSE': RMSE, 'Sigma': sigma, 'NLL': {}}
+        hue_dict = {'RMSE': RMSE, 'NLL': {}, 'Sigma': sigma }
+        
 
         # If evidential:
         if summary['Model'].iloc[0] == 'evidential':
@@ -64,11 +65,9 @@ def get_performance(df_summary, hue_by, hue_by_list):
 
                     # Compute loss
             loss = GaussianNLLLoss()
-            nll_loss = loss(input=torch.Tensor(summary['prediction'].to_numpy()),
-                            target=torch.Tensor(summary['target'].to_numpy()),
-                            var=torch.Tensor(summary['epistemic'].to_numpy()))
+            nll_loss = loss(input=torch.Tensor(summary['prediction']), target=torch.Tensor(summary['target']), var=torch.Tensor(summary['epistemic']))
             # return ('GAUSSIANNLL', torch.sqrt(nll_loss.mean())), {}
-            hue_dict['NLL'] = torch.sqrt(nll_loss.mean()).item()  # - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
+            hue_dict['NLL'] = torch.sqrt(nll_loss.mean()) # - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
 
         #data_type = summary['ID or OOD'].iloc[0]
         performance_dict[f"{hue}"] = hue_dict
@@ -227,13 +226,13 @@ def plot_results(df_summary, hue_by, hue_by_list, RMSE_NLL_COMBINED = False):
         performance_df.plot(kind='bar', rot=0.0) # maybe split into RMSE and NLL instead
 
     else:
-        axes = performance_df.T.plot(subplots=True, layout=(1,3), kind='bar', rot=20, legend=None)
+        axes = performance_df.T.plot(subplots=True, layout=(1,2), kind='bar', rot=20, legend=None)
         for ax in axes.flat:
             for container in ax.containers:
                 ax.bar_label(container, fmt='%.2f')
 
     #table = performance_df.style.to_latex()
-    table = performance_df.to_latex()
+    table = performance_df
     return table
 
 
@@ -353,16 +352,17 @@ def evaluate_model(loaders_dict, models, experiments, args):
 
 
 
-
+'''
 if __name__ == '__main__':
 
-    experiment_name = 'TOY1D-lambda0.001'
+    experiment_name = 'BASELINE_debug/baseline'
 
     # when running with args
-    make_gif(f"../results/{experiment_name}/ALEATORIC", 'aleatoric', duration=100)
-    make_gif(f"../results/{experiment_name}/EPISTEMIC", 'epistemic.gif', duration=100)
+    make_gif(f"../results/{experiment_name}/BASELINE", 'baseline.gif', duration=100)
+    #make_gif(f"../results/{experiment_name}/EPISTEMIC", 'epistemic.gif', duration=100)
     make_gif(f"../results/{experiment_name}/PARAMS", 'parameters.gif', duration=100)
-"""
+
+
 
 
 
@@ -398,7 +398,7 @@ def error_conf_plot(summary, hue_by):
     sns.lineplot(x="Expected Conf.", y="RMSE", hue=hue_by, data=df_cutoff.reset_index())
     # todo save plot
 
-"""
+'''
 
 
 
