@@ -115,7 +115,7 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name, kappa):
             (name, error), _ = compute_rmse(outputs[:, 0].reshape(-1, 1), batch.target)
             rmse.append(error.item())
             # Compute loss
-            (loss_name, loss), xtra_losses = loss_function(outputs, batch.target, kappa)
+            (loss_name, loss), xtra_losses = loss_function(outputs, batch.target, kappa, training=model.training)
             batch_loss.append(loss.item())
             if loss_function.__class__.__name__ == "NIGLoss":
                 for name, loss_ in xtra_losses.items():
@@ -135,7 +135,7 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name, kappa):
             (name, error), _ = compute_rmse(outputs[:, 0].reshape(-1, 1), batch.target)
             rmse.append(error.item())
             # Compute loss
-            (loss_name, loss), xtra_losses = loss_function(outputs, batch.target, kappa)
+            (loss_name, loss), xtra_losses = loss_function(outputs, batch.target, kappa, training=model.training)
             batch_loss.append(loss.item())
             for name, loss_ in xtra_losses.items():
                 batch_xtra_losses[name] += [loss_.item()]

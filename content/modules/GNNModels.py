@@ -458,6 +458,7 @@ class Baseline_Q7_test(torch.nn.Module):
         # Output net
         self.output_net = torch.nn.Sequential(
             torch.nn.Linear(self.state_dim, self.hidden_dim_output).double(),
+            torch.nn.LayerNorm(self.hidden_dim_output).double(),
             torch.nn.Linear(self.hidden_dim_output, self.output_dim).double()
         )
 
@@ -471,12 +472,15 @@ class Baseline_Q7_test(torch.nn.Module):
         # Utilize GPU? #TODO: move this out of the class itself and into the run-script
         self.device = device
         self.to(device)
+        self.scalar = None
+
 
     def init_weights(self,
                      layer):  # Found here: https://www.askpython.com/python-modules/initialize-model-weights-pytorch
         if type(layer) == torch.nn.Linear:
             torch.nn.init.kaiming_normal_(layer.weight, mode='fan_out',
                                           nonlinearity='leaky_relu').double()  # Kaiming for Relu
+
 
     def forward(self, x):
         """Evaluate neural network on a batch of graphs.
@@ -502,6 +506,8 @@ class Baseline_Q7_test(torch.nn.Module):
             Neural network output
 
         """
+
+
         # Initialize node features to zeros
         self.state = torch.zeros([x.num_nodes, self.state_dim]).double().to(self.device)
 
@@ -527,6 +533,11 @@ class Baseline_Q7_test(torch.nn.Module):
         evidential_params_ = self.output_net(self.graph_state)  # (gamma, v, alpha, beta)
         # Apply activations as specified after Equation 10 in the paper
         mu, sigma = torch.tensor_split(evidential_params_, 2, axis=1)
+
+        # if trained on scaled and in eval mode
+        if self.scalar is not None and self.training==False:
+            # de-scaling prediction
+            mu = torch.from_numpy(self.scalar.inverse_transform(mu))
         out = torch.concat([mu, self.softplus(sigma)], axis=1)
         return out
 

@@ -63,6 +63,22 @@ def load_data(args):
 
     return loaders
 
+def get_scalar(train_loader, scalar_type):
+    from sklearn.preprocessing import StandardScaler
+
+    if scalar_type == 'standardize':
+        scalar = StandardScaler()
+        target = torch.tensor([])
+        for idx, batch in enumerate(train_loader):
+            target = torch.concat((target, batch.target), dim=0)
+        # fitting scalar
+        scalar = scalar.fit(target.reshape(-1, 1))
+    else:
+        raise NotImplementedError
+
+    return scalar
+
+
 def get_model_specifications(args):
     likelihood = None
 
@@ -87,7 +103,7 @@ def get_model_specifications(args):
     elif args.model == 'testbase':
         model = Baseline_Q7_test(device=torch.device(args.device))
     elif args.model == 'GNN3D_best':
-        model = EvidentialQ7(device=torch.device(args.device))
+        model = EvidentialQM7(device=torch.device(args.device))
 
     else:
         raise NotImplementedError("Specified model is currently not implemented.")
@@ -106,6 +122,7 @@ def get_model_specifications(args):
 
         # OPTIMIZER
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+        #optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
 
         return model.to(torch.device(args.device)), loss_function, optimizer
     else:

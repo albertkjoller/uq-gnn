@@ -7,7 +7,7 @@ from copy import deepcopy
 
 from content.train import train
 from content.evaluate import evaluate_model
-from content.modules.utils import load_data, get_model_specifications, save_model, load_model
+from content.modules.utils import load_data, get_model_specifications, save_model, load_model, get_scalar
 
 def get_arguments(parser):
     parser.add_argument(
@@ -69,6 +69,13 @@ def get_arguments(parser):
         default=500,
     )
     parser.add_argument(
+        "--scalar",
+        type=str,
+        help="Type of scalar on target variable.",
+        default=None,
+        choices=['standardize'],
+    )
+    parser.add_argument(
         "--NIG_lambda",
         type=float,
         help="Lambda value when running NIG loss function.",
@@ -76,12 +83,14 @@ def get_arguments(parser):
     parser.add_argument(
         "--kappa",
         type=float,
-        help="Trade-off between specific loss and RMSE. Must be in range [0, 1]. A value of 1 means full emphasis on the RMSE."
+        help="Trade-off between specific loss and RMSE. Must be in range [0, 1]. A value of 1 means full emphasis on the RMSE.",
+        default=0,
     )
     parser.add_argument(
         "--kappa_decay",
         type=float,
-        help="Decay parameter for threshold value between loss and RMSE. Must be in range [0, 1] with 1 being no decay."
+        help="Decay parameter for threshold value between loss and RMSE. Must be in range [0, 1] with 1 being no decay.",
+        default=1,
     )
     parser.add_argument(
         "--lr",
@@ -177,9 +186,14 @@ if __name__ == '__main__':
         loaders = {k: v for k, v in loaders.items() if k != 'visualization'}
         device = torch.device(args.device)
 
-
         # Get training specific objects
         model, loss_function, optimizer = get_model_specifications(args)
+
+        # if target is scaled
+        if args.scalar is not None:
+            scalar = get_scalar(loaders['train'], args.scalar)
+            model.scalar = scalar
+            loss_function.scalar = scalar
 
         # Run training loop
         model, best_epoch = train(loaders, model, optimizer,
