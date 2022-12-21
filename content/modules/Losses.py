@@ -7,7 +7,7 @@ class NIGLoss:
     def __init__(self, lambd_) -> None:
         self.lambd_ = lambd_
 
-    def __call__(self, evidential_params_, y, kappa=0):
+    def __call__(self, evidential_params_, y, kappa=0, training=True):
         """
         Forward pass through the NIGLoss function.
 

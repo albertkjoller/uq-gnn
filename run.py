@@ -192,21 +192,6 @@ if __name__ == '__main__':
             model.scalar = scalar
             loss_function.scalar = scalar
 
-        # Run training loop
-        model, best_epoch = train(loaders, model, optimizer,
-                                  loss_function=loss_function,
-                                  epochs=args.epochs,
-                                  kappa=args.kappa,
-                                  kappa_decay=args.kappa_decay,
-                                  val_every_step=args.val_every_step,
-                                  experiment_name=args.experiment_name,
-                                  tensorboard_logdir=args.tensorboard_logdir,
-                                  tensorboard_filename=determine_run_version(args),
-                                  save_path=f"{args.save_path}/{args.experiment_name}",
-                                  )
-
-        if args.save_path != '':
-            save_model(model, args)
         # Grid search Lambda values
         lambda_vals = args.NIG_lambda[0] # extracting values before overwrite
         for lambda_val in lambda_vals:
