@@ -102,11 +102,11 @@ test set, the nodes are sampled with a centerbox of -10,10.
 """
 if __name__== '__main__':
     mol_sizes = np.hstack((np.zeros(200)+3,np.zeros(200)+4))
-    mol_sizes = np.hstack((mol_sizes, np.zeros(600)+5))
+    mol_sizes = np.hstack((mol_sizes,np.zeros(600)+5))
 
     #centerbox = (-3,3):
-    create_molecules(mol_sizes,'data/SYNTHETIC3/', center_box=(-3,3), larger=False)
+    create_molecules(mol_sizes,'data/SYNTHETIC3/', center_box=(-2,2), larger=False)
 
     #centerbox = (-4,4):
-    create_molecules(mol_sizes,'data/SYNTHETIC4/', center_box=(-5,5), larger=True)
+    create_molecules(mol_sizes,'data/SYNTHETIC4/', center_box=(-3,3), larger=True)
 
