@@ -77,7 +77,8 @@ def get_arguments(parser):
     )
     parser.add_argument(
         "--NIG_lambda",
-        type=float,
+        nargs='+',
+        action='append',
         help="Lambda value when running NIG loss function.",
     )
     parser.add_argument(
@@ -176,10 +177,6 @@ if __name__ == '__main__':
         args.experiment_name = args.experiment_name[0]
         args.model = args.model[0]
 
-        try:
-            os.makedirs(args.save_path + f"/{args.experiment_name}")
-        except Exception as e:
-            print('Include --save_path, or folder already exists')
         # Load data and device
         # todo: this causes error: 'visualization': dataset['train']
         loaders = load_data(args)
@@ -210,6 +207,34 @@ if __name__ == '__main__':
 
         if args.save_path != '':
             save_model(model, args)
+        # Grid search Lambda values
+        lambda_vals = args.NIG_lambda[0] # extracting values before overwrite
+        for lambda_val in lambda_vals:
+            args.NIG_lambda = float(lambda_val)
+
+            try: # Creating folder
+                os.makedirs(args.save_path + f"/{args.experiment_name}" + f"/lambda{args.NIG_lambda}")
+            except Exception as e:
+                print('Include --save_path, or folder already exists')
+                
+            # Get training specific objects
+            model, loss_function, optimizer = get_model_specifications(args)
+
+            # Run training loop
+            model, best_epoch = train(loaders, model, optimizer,
+                                    loss_function=loss_function,
+                                    epochs=args.epochs,
+                                    kappa=args.kappa,
+                                    kappa_decay=args.kappa_decay,
+                                    val_every_step=args.val_every_step,
+                                    experiment_name=args.experiment_name,
+                                    tensorboard_logdir=args.tensorboard_logdir,
+                                    tensorboard_filename=determine_run_version(args),
+                                    save_path=f"{args.save_path}/{args.experiment_name}",
+                                    )
+
+            if args.save_path != '':
+                save_model(model, args)
 
     elif args.mode == 'evaluation':
         models = {}

@@ -27,7 +27,7 @@ def train(dataloaders, model, optimizer, loss_function,
 
     # Setup storage information
     current_best, info_str = np.inf, ""
-    train_lss, val_lss, val_rmse = np.zeros(epochs), np.zeros(epochs // val_every_step), np.zeros(epochs // val_every_step)
+    train_lss, train_rmse, val_lss, val_rmse = np.zeros(epochs), np.zeros(epochs), np.zeros(epochs // val_every_step), np.zeros(epochs // val_every_step)
 
     with trange(epochs) as t:
         val_step = 0
@@ -75,6 +75,7 @@ def train(dataloaders, model, optimizer, loss_function,
 
             # Store training losses
             train_lss[epoch] = np.mean(batch_loss)
+            train_rmse[epoch] = np.mean(batch_xtra_losses['RMSE'])
             writer.add_scalar(f'TRAIN/{loss_name}', np.mean(batch_loss), epoch)
             if loss_function.__class__.__name__ == "NIGLoss":
                 for name, loss_ in batch_xtra_losses.items():
@@ -85,7 +86,7 @@ def train(dataloaders, model, optimizer, loss_function,
             kappa = kappa * kappa_decay
 
             # Print status
-            t.set_description_str(f'Train Loss: {train_lss[epoch-1]:.3f} \t| \t Val Loss: {val_lss[val_step-1]:.3f} \t| \t Val RMSE: {val_rmse[val_step-1]:.3f} | Progress')
+            t.set_description_str(f'Train Loss: {train_lss[epoch-1]:.3f} \t | \t Train RMSE: {train_rmse[epoch-1]:.3f} \t | \t Val Loss: {val_lss[val_step-1]:.3f} \t| \t Val RMSE: {val_rmse[val_step-1]:.3f} | Progress')
 
     # Close tensorboard
     writer.close()

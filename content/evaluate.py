@@ -226,7 +226,7 @@ def plot_results(df_summary, hue_by, hue_by_list, RMSE_NLL_COMBINED = False):
         performance_df.plot(kind='bar', rot=0.0) # maybe split into RMSE and NLL instead
 
     else:
-        axes = performance_df.T.plot(subplots=True, layout=(1,2), kind='bar', rot=20, legend=None)
+        axes = performance_df.T.plot(subplots=True, layout=(1,3), kind='bar', rot=20, legend=None)
         for ax in axes.flat:
             for container in ax.containers:
                 ax.bar_label(container, fmt='%.2f')

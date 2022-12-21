@@ -563,7 +563,7 @@ class Evidential_Q7_test(torch.nn.Module):
         # Define locked parameters
         self.edge_dim = 1
         self.output_dim = 4
-        self.num_features = 1
+        self.num_features = 2
         self.hidden_dim_message = 128
         self.hidden_dim_output = 128
 
@@ -574,12 +574,12 @@ class Evidential_Q7_test(torch.nn.Module):
             torch.nn.LeakyReLU(),
             torch.nn.Linear(self.hidden_dim_message, self.state_dim).double(),
             torch.nn.LayerNorm(self.state_dim).double(),
-            torch.nn.LeakyReLU(),
+            torch.nn.LeakyReLU(),            
         )
 
         # Output net
         self.output_net = torch.nn.Sequential(
-            torch.nn.Linear(self.state_dim, self.hidden_dim_output).double(),
+            torch.nn.Linear(self.state_dim, self.hidden_dim_output).double(),        
             torch.nn.Linear(self.hidden_dim_output, self.output_dim).double()
         )
 
@@ -632,10 +632,12 @@ class Evidential_Q7_test(torch.nn.Module):
         for _ in range(self.num_message_passing_rounds):
             e_len = x.edge_lengths
             e_coulomb = x.edge_coulomb
+            dot_coord = dot3D(x.node_coordinates[x.node_from], x.node_coordinates[x.node_to]).view(-1,1)
 
             # Stacking features
             inp = torch.cat((self.state[x.node_from],
                              e_coulomb,
+                             dot_coord,
                              ), 1)
             message = self.message_net(inp)
 
