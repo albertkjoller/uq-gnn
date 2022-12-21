@@ -43,7 +43,7 @@ def load_data(args):
         # Load data
         dataset = retrieve_dataset(args)
 
-        if args.dataset == 'TOY1D': # TODO: add test as ARON said?
+        if args.dataset == 'TOY1D':
             loaders = {'train': dataset['train'].batches, 'val': dataset['val'], 'test': dataset['val'].batches, 'visualization': dataset['train']}
         elif args.dataset == 'TOY1D-OOD':
             loaders = {'train': None, 'val': None, 'test': dataset['test'].batches}
@@ -63,6 +63,22 @@ def load_data(args):
 
     return loaders
 
+def get_scalar(train_loader, scalar_type):
+    from sklearn.preprocessing import StandardScaler
+
+    if scalar_type == 'standardize':
+        scalar = StandardScaler()
+        target = torch.tensor([])
+        for idx, batch in enumerate(train_loader):
+            target = torch.concat((target, batch.target), dim=0)
+        # fitting scalar
+        scalar = scalar.fit(target.reshape(-1, 1))
+    else:
+        raise NotImplementedError
+
+    return scalar
+
+
 def get_model_specifications(args):
     likelihood = None
 
@@ -79,11 +95,15 @@ def get_model_specifications(args):
         model = ABaselineGNN3D(device=torch.device(args.device))
     elif args.model == 'DEBUG3D2':
         model = A2BaselineGNN3D(device=torch.device(args.device))
-    # if you are testing a model, import it here:
+    elif args.model == 'evidentialQM7':
+        model = EvidentialQM7(device=torch.device(args.device))
+    # if you are testing a model, import here:
     elif args.model == 'testevi':
         model = Evidential_Q7_test(device=torch.device(args.device))
     elif args.model == 'testbase':
         model = Baseline_Q7_test(device=torch.device(args.device))
+    elif args.model == 'GNN3D_best':
+        model = EvidentialQM7(device=torch.device(args.device))
 
     else:
         raise NotImplementedError("Specified model is currently not implemented.")
@@ -102,6 +122,7 @@ def get_model_specifications(args):
 
         # OPTIMIZER
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+        #optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
 
         return model.to(torch.device(args.device)), loss_function, optimizer
     else:
