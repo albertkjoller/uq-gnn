@@ -28,12 +28,6 @@ def get_arguments(parser):
         help="Path to data directory where various datasets are stored.",
         required=True,
     )
-    #parser.add_argument(
-    #    "--dataset",
-    #    type=str,
-    #    help="Name of the dataset to be used. Options: [TOY1D, QM7, SYNTHETIC]",
-    #    required=True,
-    #)
     parser.add_argument(
         "--dataset",
         action='append',
@@ -57,11 +51,6 @@ def get_arguments(parser):
         help="Batch size to be used.",
         default=64,
     )
-    #parser.add_argument(
-    #    "--model",
-    #    type=str,
-    #    help="The model type to use when training. Currently, either 'TOY1D', 'GNN3D', 'BASE1D', or 'BASE3D'."
-    #)
     parser.add_argument(
         "--model",
         action='append',
@@ -85,6 +74,16 @@ def get_arguments(parser):
         help="Lambda value when running NIG loss function.",
     )
     parser.add_argument(
+        "--kappa",
+        type=float,
+        help="Trade-off between specific loss and RMSE. Must be in range [0, 1]. A value of 1 means full emphasis on the RMSE."
+    )
+    parser.add_argument(
+        "--kappa_decay",
+        type=float,
+        help="Decay parameter for threshold value between loss and RMSE. Must be in range [0, 1] with 1 being no decay."
+    )
+    parser.add_argument(
         "--lr",
         type=float,
         help="Learning rate when training.",
@@ -101,19 +100,12 @@ def get_arguments(parser):
         help="Path to location for storing tensorboard log-files.",
         default='logs',
     )
-    #parser.add_argument(
-    #    "--experiment_name",
-    #    type=str,
-    #    help="Name of experiment run (identical for train and evaluation mode).",
-    #    required=True,
-    #)
     parser.add_argument(
         '--experiment_name',
         action='append',
         help="Name of experiment run (identical for train and evaluation mode).",
         required=True,
     )
-
     parser.add_argument(
         "--device",
         type=str,
@@ -139,15 +131,15 @@ def check_assertions(args):
     # Device
     if args.device == 'cuda':
         assert torch.cuda.is_available() == True, "Your system does not support running on GPU."
-    # TODO: add more assertions for input arguments
 
 def determine_run_version(args):
-
     version_ = args.experiment_name
     version_ += f"_data.{args.dataset}"
     version_ += f"_loss.{args.loss_function}"
     if args.loss_function == 'NIG':
         version_ += f"_lambda.{args.NIG_lambda}"
+    version_ += f"_kappa.{args.kappa}"
+    version_ += f"_decay.{args.kappa_decay}"
     version_ += f"_epochs.{args.epochs}"
     version_ += f"_lr.{args.lr}"
     version_ += f"_batch.{args.batch_size}"
@@ -182,6 +174,7 @@ if __name__ == '__main__':
         # Load data and device
         # todo: this causes error: 'visualization': dataset['train']
         loaders = load_data(args)
+        loaders = {k: v for k, v in loaders.items() if k != 'visualization'}
         device = torch.device(args.device)
 
 
@@ -192,6 +185,8 @@ if __name__ == '__main__':
         model, best_epoch = train(loaders, model, optimizer,
                                   loss_function=loss_function,
                                   epochs=args.epochs,
+                                  kappa=args.kappa,
+                                  kappa_decay=args.kappa_decay,
                                   val_every_step=args.val_every_step,
                                   experiment_name=args.experiment_name,
                                   tensorboard_logdir=args.tensorboard_logdir,

@@ -10,7 +10,8 @@ from content.modules.Losses import RMSELoss
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-def train(dataloaders, model, optimizer, loss_function, epochs=1000,
+def train(dataloaders, model, optimizer, loss_function,
+          epochs=1000, kappa=0.0, kappa_decay=1.0,
           val_every_step=50, experiment_name=str(time.time()),
           tensorboard_logdir='logs', tensorboard_filename=str(time.time()),
           save_path=''):
@@ -37,7 +38,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
                     # Change network mode
                     model.eval()
                     # Evaluate on validation batch
-                    val_loss, rmse = evaluate(model, val_loader, writer, epoch, loss_function, experiment_name)
+                    val_loss, rmse = evaluate(model, val_loader, writer, epoch, loss_function, experiment_name, kappa=kappa)
 
                     # Save best model on validation set
                     if val_loss <= current_best:
@@ -62,7 +63,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
                 outputs = model(train_batch)
 
                 # Compute loss
-                (loss_name, loss), xtra_losses = loss_function(outputs, train_batch.target)
+                (loss_name, loss), xtra_losses = loss_function(outputs, train_batch.target, kappa=kappa)
                 loss.backward()
                 optimizer.step()
 
@@ -79,6 +80,10 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
                 for name, loss_ in batch_xtra_losses.items():
                     writer.add_scalar(f'TRAIN/{name}', np.mean(loss_), epoch)
 
+            # Update kappa threshold with decay
+            writer.add_scalar(f'TRAIN/kappa', kappa, epoch)
+            kappa = kappa * kappa_decay
+
             # Print status
             t.set_description_str(f'Train Loss: {train_lss[epoch-1]:.3f} \t| \t Val Loss: {val_lss[val_step-1]:.3f} \t| \t Val RMSE: {val_rmse[val_step-1]:.3f} | Progress')
 
@@ -87,7 +92,7 @@ def train(dataloaders, model, optimizer, loss_function, epochs=1000,
     print(info_str)
     return model, best_epoch
 
-def evaluate(model, data, writer, epoch, loss_function, experiment_name):
+def evaluate(model, data, writer, epoch, loss_function, experiment_name, kappa):
     compute_rmse = RMSELoss()
     rmse = []
     if '1D' in model.__class__.__name__:
@@ -99,7 +104,6 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
 
         # Use batches for obtaining batched validation loss
         data = data.batches
-        #loss = 0
 
     if 'Evidential' in model.__class__.__name__:
 
@@ -111,7 +115,7 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
             (name, error), _ = compute_rmse(outputs[:, 0].reshape(-1, 1), batch.target)
             rmse.append(error.item())
             # Compute loss
-            (loss_name, loss), xtra_losses = loss_function(outputs, batch.target)
+            (loss_name, loss), xtra_losses = loss_function(outputs, batch.target, kappa)
             batch_loss.append(loss.item())
             if loss_function.__class__.__name__ == "NIGLoss":
                 for name, loss_ in xtra_losses.items():
@@ -131,7 +135,7 @@ def evaluate(model, data, writer, epoch, loss_function, experiment_name):
             (name, error), _ = compute_rmse(outputs[:, 0].reshape(-1, 1), batch.target)
             rmse.append(error.item())
             # Compute loss
-            (loss_name, loss), xtra_losses = loss_function(outputs, batch.target)
+            (loss_name, loss), xtra_losses = loss_function(outputs, batch.target, kappa)
             batch_loss.append(loss.item())
             for name, loss_ in xtra_losses.items():
                 batch_xtra_losses[name] += [loss_.item()]

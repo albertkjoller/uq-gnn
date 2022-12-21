@@ -43,7 +43,7 @@ def load_data(args):
         # Load data
         dataset = retrieve_dataset(args)
 
-        if args.dataset == 'TOY1D': # TODO: add test as ARON said?
+        if args.dataset == 'TOY1D':
             loaders = {'train': dataset['train'].batches, 'val': dataset['val'], 'test': dataset['val'].batches, 'visualization': dataset['train']}
         elif args.dataset == 'TOY1D-OOD':
             loaders = {'train': None, 'val': None, 'test': dataset['test'].batches}
