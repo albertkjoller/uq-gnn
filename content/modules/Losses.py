@@ -91,6 +91,7 @@ class GAUSSIANNLLLoss:
         rmse_loss = torch.sqrt(torch.mean((self.mu - self.y)**2))
 
         # Update losses
-        nll_loss = (1 - kappa) * torch.sqrt(nll_loss.mean()) + kappa * rmse_loss
-        return ('GAUSSIANNLL', nll_loss), {'RMSE':rmse_loss}
+        #nll_loss = (1 - kappa) * torch.sqrt(nll_loss.mean()) + kappa * rmse_loss
+        nll_loss = (1 - kappa) * nll_loss.mean() + kappa * rmse_loss
+        return ('GAUSSIANNLL', nll_loss), {'RMSE': rmse_loss}
 
