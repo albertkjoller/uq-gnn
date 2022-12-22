@@ -537,7 +537,8 @@ class Baseline_Q7_test(torch.nn.Module):
         # if trained on scaled and in eval mode
         if self.scalar is not None and self.training==False:
             # de-scaling prediction
-            mu = torch.from_numpy(self.scalar.inverse_transform(mu))
+            mu = torch.from_numpy(self.scalar.inverse_transform(mu.detach()))
+            # todo: descale sigma
         out = torch.concat([mu, self.softplus(sigma)], axis=1)
         return out
 

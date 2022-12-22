@@ -59,11 +59,12 @@ def train(dataloaders, model, optimizer, loss_function,
             for idx_batch, train_batch in enumerate(train_loader):
 
                 optimizer.zero_grad()
+                #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
                 # Run forward pass
                 outputs = model(train_batch)
 
                 # Compute loss
-                (loss_name, loss), xtra_losses = loss_function(outputs, train_batch.target, kappa=kappa)
+                (loss_name, loss), xtra_losses = loss_function(outputs, train_batch.target, kappa=kappa, training=model.training)
                 loss.backward()
                 optimizer.step()
 

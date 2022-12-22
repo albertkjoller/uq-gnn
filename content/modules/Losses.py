@@ -30,6 +30,7 @@ class NIGLoss:
                                                      evidential_params_[:, 3].reshape(-1, 1)
 
         # Get losses
+        y = y.reshape(-1, 1)
         nll_loss = self.NIG_NLL(y)
         reg_loss = self.NIG_REGULARIZER(y)
         rmse_loss = torch.sqrt(torch.mean((self.gamma - y) ** 2))
@@ -87,17 +88,27 @@ class GAUSSIANNLLLoss:
         self.sigma = theta[:, 1].reshape(-1, 1)
         self.y = y.reshape(-1,1)
 
-        # if training on scaled data, then scale target variable
+        # if training on scaled data
         if self.scalar is not None:
-            self.y = torch.from_numpy(self.scalar.transform(self.y))
-            # if in eval, then scale models output data
-            if not training:
+            # if in eval, then models outputs descaled data
+            if training: # then scale target variable
+                # de-scale y for NLL loss
+                nll_loss = self.loss_func(target=torch.from_numpy(self.scalar.transform(self.y)), input=self.mu, var=self.sigma)
+                # de-scale mu for RMSE
+                rmse_loss = torch.sqrt(torch.mean((torch.from_numpy(self.scalar.inverse_transform(self.mu.detach())) - self.y) ** 2))
+
+            else: # not training and model output is descaled
+                # rmse is as normal (model output has been converted)
+                rmse_loss = torch.sqrt(torch.mean((self.mu - self.y) ** 2))
+                # NLL has to be scaled on both terms
+                self.y = torch.from_numpy(self.scalar.transform(self.y))
                 self.mu = torch.from_numpy(self.scalar.transform(self.mu))
+                nll_loss = self.loss_func(target=self.y, input=self.mu, var=self.sigma)
 
-
-        # Compute loss
-        nll_loss = self.loss_func(target=self.y, input=self.mu, var=self.sigma)
-        rmse_loss = torch.sqrt(torch.mean((self.mu - self.y)**2))
+        else:
+            # Compute loss like normal
+            nll_loss = self.loss_func(target=self.y, input=self.mu, var=self.sigma)
+            rmse_loss = torch.sqrt(torch.mean((self.mu - self.y)**2))
 
         # Update losses
         #nll_loss = (1 - kappa) * torch.sqrt(nll_loss.mean()) + kappa * rmse_loss

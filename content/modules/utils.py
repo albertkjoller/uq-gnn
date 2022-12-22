@@ -73,10 +73,10 @@ def get_scalar(train_loader, scalar_type):
             target = torch.concat((target, batch.target), dim=0)
         # fitting scalar
         scalar = scalar.fit(target.reshape(-1, 1))
-    else:
-        raise NotImplementedError
+        return scalar
 
-    return scalar
+    elif scalar_type == 'none':
+        raise None
 
 
 def get_model_specifications(args):

@@ -15,6 +15,7 @@ def get_arguments(parser):
         type=str,
         help="Defines whether to run in train or evaluation mode.",
         required=True,
+        choices=['train', 'evaluation']
     )
     parser.add_argument(
         "--seed",
@@ -70,10 +71,9 @@ def get_arguments(parser):
     )
     parser.add_argument(
         "--scalar",
-        type=str,
+        action='append',
         help="Type of scalar on target variable.",
-        default=None,
-        choices=['standardize'],
+        choices=['standardize', 'none'],
     )
     parser.add_argument(
         "--NIG_lambda",
@@ -133,6 +133,7 @@ def get_arguments(parser):
         '--id_ood',
         action='append',
         help="For evaluation only: whether dataset is in or out of distribution.",
+        choices=['ID', 'OOD'],
     )
 
 def check_assertions(args):
@@ -186,11 +187,11 @@ if __name__ == '__main__':
         # Get training specific objects
         model, loss_function, optimizer = get_model_specifications(args)
 
-        # if target is scaled
-        if args.scalar is not None:
-            scalar = get_scalar(loaders['train'], args.scalar)
-            model.scalar = scalar
-            loss_function.scalar = scalar
+        # if target is scaled, default is none
+        args.scalar = args.scalar[0]
+        scalar = get_scalar(loaders['train'], args.scalar)
+        model.scalar = scalar
+        loss_function.scalar = scalar
 
         # Grid search Lambda values
         lambda_vals = args.NIG_lambda[0] # extracting values before overwrite
@@ -222,21 +223,34 @@ if __name__ == '__main__':
                 save_model(model, args)
 
     elif args.mode == 'evaluation':
+
+        # todo, check that all arguments have equal length
+
+
         models = {}
         loaders_dict = {}
+
+        # getting each dataset loader
+        for idx, data in enumerate(args.dataset):
+            curr_args = deepcopy(args)
+            curr_args.dataset = args.dataset[idx]
+            # dataset
+            loaders_dict[args.id_ood[idx]] = load_data(curr_args)
+
         # getting each model
         for idx, exp in enumerate(args.experiment_name):
             curr_args = deepcopy(args)
             curr_args.experiment_name, curr_args.model = exp, args.model[idx]
             # model
-            models[exp] = load_model(curr_args)
+            model = load_model(curr_args)
 
-        # getting each dataset loader
-        for idx, data in enumerate(args.dataset):
-            curr_args = deepcopy(args)
-            curr_args.dataset =args.dataset[idx]
-            # dataset
-            loaders_dict[args.id_ood[idx]] = load_data(curr_args)
+            # if target is scaled, default none
+            # todo: what if multiple ID datasetS
+            scalar = get_scalar(loaders_dict['ID']['train'], args.scalar[idx])
+            model.scalar = scalar
+            #loss_function.scalar = scalar
+
+            models[exp] = model
 
         results_ = evaluate_model(loaders_dict=loaders_dict, models=models, experiments=args.experiment_name, args = args)
         print(results_)
