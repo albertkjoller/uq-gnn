@@ -564,23 +564,25 @@ class Evidential_Q7_test(torch.nn.Module):
         # Define locked parameters
         self.edge_dim = 1
         self.output_dim = 4
-        self.num_features = 2
-        self.hidden_dim_message = 128
+        self.num_features = 1
+        self.h1_message = 128
+        self.h2_message = 256
+        self.h3_message = 256
         self.hidden_dim_output = 128
 
         # Message passing networks
         self.message_net = torch.nn.Sequential(
-            torch.nn.Linear(self.state_dim + self.num_features, self.hidden_dim_message).double(),
-            torch.nn.LayerNorm(self.hidden_dim_message).double(),
+            torch.nn.Linear(self.state_dim + self.num_features, self.h1_message).double(),
+            torch.nn.LayerNorm(self.h1_message).double(),
             torch.nn.LeakyReLU(),
-            torch.nn.Linear(self.hidden_dim_message, self.state_dim).double(),
+            torch.nn.Linear(self.h1_message, self.state_dim).double(),
             torch.nn.LayerNorm(self.state_dim).double(),
-            torch.nn.LeakyReLU(),            
+            torch.nn.LeakyReLU(),
         )
 
         # Output net
         self.output_net = torch.nn.Sequential(
-            torch.nn.Linear(self.state_dim, self.hidden_dim_output).double(),        
+            torch.nn.Linear(self.state_dim, self.hidden_dim_output).double(),
             torch.nn.Linear(self.hidden_dim_output, self.output_dim).double()
         )
 
@@ -595,6 +597,8 @@ class Evidential_Q7_test(torch.nn.Module):
         self.eps = eps
         self.device = device
         self.to(device)
+
+        self.scalar = None
 
     def init_weights(self,
                      layer):  # Found here: https://www.askpython.com/python-modules/initialize-model-weights-pytorch
@@ -633,12 +637,10 @@ class Evidential_Q7_test(torch.nn.Module):
         for _ in range(self.num_message_passing_rounds):
             e_len = x.edge_lengths
             e_coulomb = x.edge_coulomb
-            dot_coord = dot3D(x.node_coordinates[x.node_from], x.node_coordinates[x.node_to]).view(-1,1)
-
+            
             # Stacking features
             inp = torch.cat((self.state[x.node_from],
-                             e_coulomb,
-                             dot_coord,
+                             e_coulomb, 
                              ), 1)
             message = self.message_net(inp)
 
@@ -653,20 +655,19 @@ class Evidential_Q7_test(torch.nn.Module):
         evidential_params_ = self.output_net(self.graph_state)  # (gamma, v, alpha, beta)
         # Apply activations as specified after Equation 10 in the paper
         gamma, v, alpha, beta = torch.tensor_split(evidential_params_, 4, axis=1)
+
+        # if trained on scaled and in eval mode
+        if self.scalar is not None and self.training==False:
+            # de-scaling prediction
+            gamma = torch.from_numpy(self.scalar.inverse_transform(gamma.detach()))
+
         out = torch.concat(
             [gamma, self.softplus(v) + self.eps, self.softplus(alpha).add(1.0).to(torch.float64) + self.eps,
              self.softplus(beta) + self.eps], axis=1)
 
         return out
 
-
-
-
-
-
-
 ### INVARIANT OPERATIONS
-
 def cross2D(v1, v2):
     """Compute the 2-d cross product.
 

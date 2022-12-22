@@ -6,6 +6,7 @@ from torch.nn import GaussianNLLLoss
 class NIGLoss:
     def __init__(self, lambd_) -> None:
         self.lambd_ = lambd_
+        self.scalar = None
 
     def __call__(self, evidential_params_, y, kappa=0, training=True):
         """
@@ -31,9 +32,36 @@ class NIGLoss:
 
         # Get losses
         y = y.reshape(-1, 1)
-        nll_loss = self.NIG_NLL(y)
-        reg_loss = self.NIG_REGULARIZER(y)
-        rmse_loss = torch.sqrt(torch.mean((self.gamma - y) ** 2))
+
+        # if training on scaled data
+        if self.scalar is not None:
+
+            # if in eval, then models outputs descaled data
+            if training: # then scale target variable
+
+                # de-scale y for NLL loss
+                nll_loss = self.NIG_NLL(torch.from_numpy(self.scalar.transform(y)))
+                reg_loss = self.NIG_REGULARIZER(torch.from_numpy(self.scalar.transform(y)))
+                # de-scale gamma for RMSE
+                rmse_loss = torch.sqrt(torch.mean((torch.from_numpy(self.scalar.inverse_transform(self.gamma.detach())) - y) ** 2))
+
+                # Compute total loss
+                total_loss = nll_loss + (self.lambd_ * reg_loss)
+                total_loss = (1 - kappa) * total_loss.mean() + kappa * rmse_loss                
+
+            else: # not training and model output is descaled
+                # rmse is as normal (model output has been converted)
+                rmse_loss = torch.sqrt(torch.mean((self.gamma - y) ** 2))
+                # NLL has to be scaled on both terms
+                y = torch.from_numpy(self.scalar.transform(y))
+                nll_loss = self.NIG_NLL(y)
+                reg_loss = self.NIG_REGULARIZER(y)
+                
+        else:
+            # Compute loss like normal
+            nll_loss = self.NIG_NLL(y)
+            reg_loss = self.NIG_REGULARIZER(y)
+            rmse_loss = torch.sqrt(torch.mean((self.gamma - y) ** 2))
 
         # Compute total loss
         total_loss = nll_loss + (self.lambd_ * reg_loss)
