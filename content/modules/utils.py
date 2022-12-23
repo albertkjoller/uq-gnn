@@ -98,8 +98,8 @@ def get_model_specifications(args):
     elif args.model == 'evidentialQM7':
         model = EvidentialQM7(device=torch.device(args.device))
     # if you are testing a model, import here:
-    elif args.model == 'testevi':
-        model = Evidential_Q7_test(device=torch.device(args.device))
+    elif args.model == 'EvidentialQM7_3D':
+        model = EvidentialQM7_3D(device=torch.device(args.device))
     elif args.model == 'testbase':
         model = Baseline_Q7_test(device=torch.device(args.device))
     elif args.model == 'GNN3D_best':

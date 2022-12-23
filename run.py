@@ -286,7 +286,7 @@ if __name__ == '__main__':
 
             # if target is scaled, default none
             # todo: what if multiple ID datasetS
-            scalar = get_scalar(loaders_dict['ID']['train'], args.scalar[idx])
+            scalar = get_scalar(loaders_dict['ID']['train'], args.scalar)
             model.scalar = scalar
             #loss_function.scalar = scalar
 

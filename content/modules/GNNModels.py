@@ -543,7 +543,7 @@ class Baseline_Q7_test(torch.nn.Module):
         return out
 
 
-class Evidential_Q7_test(torch.nn.Module):
+class EvidentialQM7_3D(torch.nn.Module):
     """Translation and rotation invariant graph neural network.
 
         Keyword Arguments
