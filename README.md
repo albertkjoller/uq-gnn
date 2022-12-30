@@ -8,6 +8,7 @@ This project examines uncertainty quantification in graph neural networks by app
 - [Notebook containing descriptions for reproducibility of the associated project report.](https://nbviewer.org/github/albertkjoller/uq-gnn/blob/main/explainer_notebook.ipynb)
 - Code structure for experimenting with training models (see *Training models* section below)
 
+For in-depth considerations and conclusions of results consult the associated paper.
 
 #### Example - Evidential Learning
 
@@ -24,6 +25,11 @@ pip install -r requirements.txt
 ```
 Additionally installing Pytorch is required - check their webpage for finding a compatible version (GPU or CPU).
 
+### Data
+
+You can find the data [here](https://drive.google.com/drive/folders/1cSR59Bb4Tj_FiLei4866AD1-4GMr7dop?usp=sharing).
+Download the `data`-folder and place it in the `content`-directory!
+
 ## Training models
 
 Advised to run training loop through a terminal via the `run.py`-file. 
@@ -34,11 +40,6 @@ python run.py -h
 ```
 
 A few examples are provided for training models:
-
-### Data
-
-You can find the data [here](https://drive.google.com/drive/folders/1cSR59Bb4Tj_FiLei4866AD1-4GMr7dop?usp=sharing).
-Download the `data`-folder and place it in the `content`-directory!
 
 ### Toy Dataset - 1D
 #### Evidential learning
@@ -67,18 +68,18 @@ python run.py --mode train --data_dir content/data --dataset TOY1D --batch_size 
 #### Evidential learning - QM7 Dataset
 
 ```
-python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 128 \
-              --model GNN3D --epochs 1000 --lr 5e-3 --loss_function NIG --NIG_lambda 0.01 \
-              --val_every_step 25 --tensorboard_logdir logs --experiment_name EVIDENTIAL_QM7 \
+python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 64 \
+              --model EvidentialQM7_3D --epochs 200 --lr 5e-3 --loss_function NIG --NIG_lambda 0.75 --kappa 1.0 --kappa_decay 0.99 \
+              --scalar 'none' --val_every_step 25 --tensorboard_logdir logs --experiment_name EVIDENTIAL_QM7 \
               --seed 0 --device cuda
 ```
 
 #### Gaussian MLE (baseline)
 
 ```
-python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 128 \
-              --model BASE3D --epochs 1000 --lr 5e-3 --loss_function GAUSSIANNLL \
-              --val_every_step 25 --tensorboard_logdir logs --experiment_name BASELINE_QM7 \
+python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 64 \
+              --model testbase --epochs 200 --lr 5e-3 --loss_function GAUSSIANNLL --kappa 0.0 --kappa_decay 1.0 \
+              --scalar 'standardize' --val_every_step 25 --tensorboard_logdir logs --experiment_name BASELINE_QM7 \
               --save_path models --seed 0 --device cuda
 ```
 
@@ -88,7 +89,7 @@ python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 12
 It is possible to evaluate models across e.g. seed to see variance of performance, type of models to compare them, and also different data types like ID or OOD to evaluate the epistemic uncertainty. The general running command line is:
 
 ```
-python run.py --mode evaluation --data_dir content/data --batch_size 128 --save_path models --seed 0 --device cpu
+python run.py --mode evaluation --data_dir content/data --batch_size 64 --save_path models --seed 0 --device cpu
 ```
 And considering the 1D toy example, you can evaluatte an experiment by appending the following to the command above:
 
@@ -102,3 +103,37 @@ As an example, to add another TOY1D model which has trained on a different seed,
 ```
 --experiment_name 1D_model_2 --model TOY1D --dataset TOY1D --id_ood ID
 ```
+
+### A run-down of all arguments:
+
+- `--mode [train, evaluation]`, defines whether to run in train or evaluation mode.
+
+if train:
+	
+- `--epochs int`, How many epochs to run.
+- `--batch_size int`, Batch size to be used.
+- `--lr float`, Learning rate when training.
+- `--val_every_step int`, Frequency of running model on validation data during training.
+- `--save_path str`, Path to saving models.
+- `--model str`, The model type to use when training. Currently, either 'TOY1D', 'GNN3D', 'BASE1D', or 'BASE3D'.
+- `--loss_function [NIG, MSE, GAUSSIANNLL]`, Type of loss function.
+	- if NIG:
+	- `--NIG_lambda float`, Lambda value when running NIG loss function, if multiple values are stated it enables a train-loop
+- `--kappa float`, Trade-off between specific loss and RMSE. Must be in range [0, 1]. A value of 1 means full emphasis on the RMSE.
+- `--kappa_decay float`, Decay parameter for threshold value between loss and RMSE. Must be in range [0, 1] with 1 being no decay.
+- `--scalar ['standardize', 'none']`, Type of standardization on target variable.
+
+if evaluation:
+- `--id_ood ['ID', 'OOD']`, For evaluation only: whether dataset is in or out of distribution.
+	
+for both train and evaluation:
+- `--seed int`, Seed for pseudo-random behaviour.
+- `--device ['cpu', 'cuda']`, Device to run computations on.
+- `--data_dir str`, Path to data directory where various datasets are stored.
+- `--tensorboard_logdir str`, Path to location for storing tensorboard log-files.
+- `--experiment_name str`, Name of experiment run (should identical for train and evaluation mode).
+- `--dataset [TOY1D, QM7, SYNTHETIC]`, Name of the dataset to be used. 
+	- if TOY1D (and training):
+	- `--toy_noise_level float`, Noise level when generating the data.
+	- `--N_points int`, Number of points for TOY1D dataset.
+
