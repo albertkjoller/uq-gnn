@@ -35,7 +35,6 @@ class NIGLoss:
 
         # if training on scaled data
         if self.scalar is not None:
-
             # if in eval, then models outputs descaled data
             if training: # then scale target variable
 

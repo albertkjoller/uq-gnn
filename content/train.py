@@ -59,7 +59,6 @@ def train(dataloaders, model, optimizer, loss_function,
             for idx_batch, train_batch in enumerate(train_loader):
 
                 optimizer.zero_grad()
-                #torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
                 # Run forward pass
                 outputs = model(train_batch)
 
@@ -67,6 +66,8 @@ def train(dataloaders, model, optimizer, loss_function,
                 (loss_name, loss), xtra_losses = loss_function(outputs, train_batch.target, kappa=kappa, training=model.training)
                 loss.backward()
                 optimizer.step()
+                if model.model_type == 'baseline':
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
 
                 # Store batch loss for epoch
                 batch_loss.append(loss.item())
