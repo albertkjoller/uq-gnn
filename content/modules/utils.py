@@ -73,11 +73,12 @@ def get_scalar(train_loader, scalar_type):
             target = torch.concat((target, batch.target), dim=0)
         # fitting scalar
         scalar = scalar.fit(target.reshape(-1, 1))
+        return scalar
+
+    elif scalar_type == 'none':
+        return None
     else:
         raise NotImplementedError
-
-    return scalar
-
 
 def get_model_specifications(args):
     likelihood = None
@@ -98,8 +99,8 @@ def get_model_specifications(args):
     elif args.model == 'evidentialQM7':
         model = EvidentialQM7(device=torch.device(args.device))
     # if you are testing a model, import here:
-    elif args.model == 'testevi':
-        model = Evidential_Q7_test(device=torch.device(args.device))
+    elif args.model == 'EvidentialQM7_3D':
+        model = EvidentialQM7_3D(device=torch.device(args.device))
     elif args.model == 'testbase':
         model = Baseline_Q7_test(device=torch.device(args.device))
     elif args.model == 'GNN3D_best':

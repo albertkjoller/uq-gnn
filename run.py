@@ -15,6 +15,7 @@ def get_arguments(parser):
         type=str,
         help="Defines whether to run in train or evaluation mode.",
         required=True,
+        choices=['train', 'evaluation']
     )
     parser.add_argument(
         "--seed",
@@ -70,14 +71,14 @@ def get_arguments(parser):
     )
     parser.add_argument(
         "--scalar",
-        type=str,
+        action='append',
         help="Type of scalar on target variable.",
-        default=None,
-        choices=['standardize'],
+        choices=['standardize', 'none'],
     )
     parser.add_argument(
         "--NIG_lambda",
-        type=float,
+        nargs='+',
+        action='append',
         help="Lambda value when running NIG loss function.",
     )
     parser.add_argument(
@@ -132,6 +133,7 @@ def get_arguments(parser):
         '--id_ood',
         action='append',
         help="For evaluation only: whether dataset is in or out of distribution.",
+        choices=['ID', 'OOD'],
     )
 
 def check_assertions(args):
@@ -176,57 +178,119 @@ if __name__ == '__main__':
         args.experiment_name = args.experiment_name[0]
         args.model = args.model[0]
 
-        try:
-            os.makedirs(args.save_path + f"/{args.experiment_name}")
-        except Exception as e:
-            print('Include --save_path, or folder already exists')
         # Load data and device
         # todo: this causes error: 'visualization': dataset['train']
         loaders = load_data(args)
         loaders = {k: v for k, v in loaders.items() if k != 'visualization'}
         device = torch.device(args.device)
 
-        # Get training specific objects
-        model, loss_function, optimizer = get_model_specifications(args)
+        if args.loss_function == 'NIG':
 
-        # if target is scaled
-        if args.scalar is not None:
-            scalar = get_scalar(loaders['train'], args.scalar)
-            model.scalar = scalar
-            loss_function.scalar = scalar
+            # Grid search Lambda values
+            lambda_vals = args.NIG_lambda[0] # extracting values before overwrite
+            experiment_name = args.experiment_name
 
-        # Run training loop
-        model, best_epoch = train(loaders, model, optimizer,
-                                  loss_function=loss_function,
-                                  epochs=args.epochs,
-                                  kappa=args.kappa,
-                                  kappa_decay=args.kappa_decay,
-                                  val_every_step=args.val_every_step,
-                                  experiment_name=args.experiment_name,
-                                  tensorboard_logdir=args.tensorboard_logdir,
-                                  tensorboard_filename=determine_run_version(args),
-                                  save_path=f"{args.save_path}/{args.experiment_name}",
-                                  )
 
-        if args.save_path != '':
-            save_model(model, args)
+            for lambda_val in lambda_vals:
+                args.NIG_lambda = float(lambda_val)
+                args.experiment_name = experiment_name + f"-lambda{args.NIG_lambda}"
+
+                try: # Creating folder
+                    os.makedirs(args.save_path + f"/{args.experiment_name}")
+                except Exception as e:
+                    print('Include --save_path, or folder already exists')
+                    
+                # Get training specific objects
+                model, loss_function, optimizer = get_model_specifications(args)
+
+                # if target is scaled
+                if args.scalar is not None:
+                    scalar = get_scalar(loaders['train'], args.scalar[0])
+                    model.scalar = scalar
+                    loss_function.scalar = scalar
+
+                # Run training loop
+                model, best_epoch = train(loaders, model, optimizer,
+                                        loss_function=loss_function,
+                                        epochs=args.epochs,
+                                        kappa=args.kappa,
+                                        kappa_decay=args.kappa_decay,
+                                        val_every_step=args.val_every_step,
+                                        experiment_name=args.experiment_name,
+                                        tensorboard_logdir=args.tensorboard_logdir,
+                                        tensorboard_filename=determine_run_version(args),
+                                        save_path=f"{args.save_path}/{args.experiment_name}",
+                                        )
+
+                if args.save_path != '':
+                    save_model(model, args)
+
+        # If Lambda not needed
+        else:
+
+            try: # Creating folder
+                os.makedirs(args.save_path + f"/{args.experiment_name}")
+            except Exception as e:
+                print('Include --save_path, or folder already exists')
+                
+            # Get training specific objects
+            model, loss_function, optimizer = get_model_specifications(args)
+
+            # if target is scaled
+            if args.scalar is not None:
+                scalar = get_scalar(loaders['train'], args.scalar[0])
+                model.scalar = scalar
+                loss_function.scalar = scalar
+
+            # Run training loop
+            model, best_epoch = train(loaders, model, optimizer,
+                                    loss_function=loss_function,
+                                    epochs=args.epochs,
+                                    kappa=args.kappa,
+                                    kappa_decay=args.kappa_decay,
+                                    val_every_step=args.val_every_step,
+                                    experiment_name=args.experiment_name,
+                                    tensorboard_logdir=args.tensorboard_logdir,
+                                    tensorboard_filename=determine_run_version(args),
+                                    save_path=f"{args.save_path}/{args.experiment_name}",
+                                    )
+
+            if args.save_path != '':
+                save_model(model, args)
+
 
     elif args.mode == 'evaluation':
+
+        # todo, check that all arguments have equal length
+
+
         models = {}
         loaders_dict = {}
+        # getting each dataset loader
+        for idx, data in enumerate(args.dataset):
+            curr_args = deepcopy(args)
+            curr_args.dataset = args.dataset[idx]
+            # dataset
+            loaders_dict[args.id_ood[idx]] = load_data(curr_args)
+
         # getting each model
         for idx, exp in enumerate(args.experiment_name):
             curr_args = deepcopy(args)
             curr_args.experiment_name, curr_args.model = exp, args.model[idx]
-            # model
-            models[exp] = load_model(curr_args)
 
-        # getting each dataset loader
-        for idx, data in enumerate(args.dataset):
-            curr_args = deepcopy(args)
-            curr_args.dataset =args.dataset[idx]
-            # dataset
-            loaders_dict[args.id_ood[idx]] = load_data(curr_args)
+            if curr_args.loss_function == 'NIG':
+                curr_args.experiment_name += f'-lambda{float(curr_args.NIG_lambda[0][0])}'
+
+            # model
+            model = load_model(curr_args)
+
+            # if target is scaled, default none
+            # todo: what if multiple ID datasetS
+            scalar = get_scalar(loaders_dict['ID']['train'], args.scalar[idx])
+            model.scalar = scalar
+            #loss_function.scalar = scalar
+
+            models[exp] = model
 
         results_ = evaluate_model(loaders_dict=loaders_dict, models=models, experiments=args.experiment_name, args = args)
         print(results_)

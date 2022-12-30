@@ -13,6 +13,7 @@ logs/
 .idea
 .vscode
 
+old/
 results/
 data/
 *.pt
