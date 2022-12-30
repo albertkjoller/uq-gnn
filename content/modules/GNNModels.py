@@ -387,6 +387,7 @@ class EvidentialToyModel1D(torch.nn.Module):
     def __init__(self, hidden_dim=100, eps=1e-7):
         super().__init__()
         self.model_type = 'evidential'
+        self.scalar = None
 
         # Regression network for 1D toy task
         self.net = torch.nn.Sequential(
