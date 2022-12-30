@@ -76,8 +76,9 @@ def get_scalar(train_loader, scalar_type):
         return scalar
 
     elif scalar_type == 'none':
-        raise None
-
+        return None
+    else:
+        raise NotImplementedError
 
 def get_model_specifications(args):
     likelihood = None

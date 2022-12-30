@@ -449,17 +449,23 @@ class Baseline_Q7_test(torch.nn.Module):
         self.message_net = torch.nn.Sequential(
             torch.nn.Linear(self.state_dim + self.num_features, self.hidden_dim_message).double(),
             torch.nn.LayerNorm(self.hidden_dim_message).double(),
+            #torch.nn.BatchNorm1d(self.hidden_dim_message).double(),
             torch.nn.LeakyReLU(),
             torch.nn.Linear(self.hidden_dim_message, self.state_dim).double(),
             torch.nn.LayerNorm(self.state_dim).double(),
+            #torch.nn.BatchNorm1d(self.state_dim).double(),
             torch.nn.LeakyReLU(),
         )
 
         # Output net
         self.output_net = torch.nn.Sequential(
             torch.nn.Linear(self.state_dim, self.hidden_dim_output).double(),
+            # --
+            # standardize then include:
             torch.nn.LayerNorm(self.hidden_dim_output).double(),
-            torch.nn.Linear(self.hidden_dim_output, self.output_dim).double()
+            torch.nn.LeakyReLU(),
+            # --
+            torch.nn.Linear(self.hidden_dim_output, self.output_dim).double(),
         )
 
         # Initialize weights
@@ -532,14 +538,15 @@ class Baseline_Q7_test(torch.nn.Module):
         # Get parameters of NIG distribution (4-dimensional output)
         evidential_params_ = self.output_net(self.graph_state)  # (gamma, v, alpha, beta)
         # Apply activations as specified after Equation 10 in the paper
-        mu, sigma = torch.tensor_split(evidential_params_, 2, axis=1)
-
+        mu, var = torch.tensor_split(evidential_params_, 2, axis=1)
+        var = self.softplus(var) # converting to positive
         # if trained on scaled and in eval mode
         if self.scalar is not None and self.training==False:
             # de-scaling prediction
             mu = torch.from_numpy(self.scalar.inverse_transform(mu.detach()))
-            # todo: descale sigma
-        out = torch.concat([mu, self.softplus(sigma)], axis=1)
+            var = var.detach()*self.scalar.var_
+
+        out = torch.concat([mu, var], axis=1)
         return out
 
 
@@ -1017,36 +1024,36 @@ class A2BaselineGNN3D(torch.nn.Module):
 class EvidentialQM7(torch.nn.Module):
     """Translation and rotation invariant graph neural network.
 
-    Keyword Arguments
-    -----------------
-        output_dim : Dimension of output (default 2)
-        state_dim : Dimension of the node states (default 10)
-        num_message_passing_rounds : Number of message passing rounds
-            (default 3)
-    """
+        Keyword Arguments
+        -----------------
+            output_dim : Dimension of output (default 2)
+            state_dim : Dimension of the node states (default 10)
+            num_message_passing_rounds : Number of message passing rounds
+                (default 3)
+        """
 
     def __init__(self, device, state_dim=32, num_message_passing_rounds=5, eps=1e-10):
         super().__init__()
         self.model_type = 'evidential'
-
         # Set input dimensions and other hyperparameters
         self.state_dim = state_dim
         self.num_message_passing_rounds = num_message_passing_rounds
-        # Define locked parameters
 
         # Define locked parameters
         self.edge_dim = 1
         self.output_dim = 4
         self.num_features = 1
-        self.hidden_dim_message = 128
+        self.h1_message = 128
+        self.h2_message = 256
+        self.h3_message = 256
         self.hidden_dim_output = 128
 
         # Message passing networks
         self.message_net = torch.nn.Sequential(
-            torch.nn.Linear(self.state_dim + self.num_features, self.hidden_dim_message).double(),
-            torch.nn.LayerNorm(self.hidden_dim_message).double(),
+            torch.nn.Linear(self.state_dim + self.num_features, self.h1_message).double(),
+            torch.nn.LayerNorm(self.h1_message).double(),
             torch.nn.LeakyReLU(),
-            torch.nn.Linear(self.hidden_dim_message, self.state_dim).double(),
+            torch.nn.Linear(self.h1_message, self.state_dim).double(),
             torch.nn.LayerNorm(self.state_dim).double(),
             torch.nn.LeakyReLU(),
         )
@@ -1065,15 +1072,17 @@ class EvidentialQM7(torch.nn.Module):
         self.softplus = torch.nn.Softplus()
 
         # Utilize GPU? #TODO: move this out of the class itself and into the run-script
+        self.eps = eps
         self.device = device
         self.to(device)
-        self.eps = eps
 
-    def init_weights(self, layer):  # Found here: https://www.askpython.com/python-modules/initialize-model-weights-pytorch
+        self.scalar = None
+
+    def init_weights(self,
+                     layer):  # Found here: https://www.askpython.com/python-modules/initialize-model-weights-pytorch
         if type(layer) == torch.nn.Linear:
             torch.nn.init.kaiming_normal_(layer.weight, mode='fan_out',
                                           nonlinearity='leaky_relu').double()  # Kaiming for Relu
-           
 
     def forward(self, x):
         """Evaluate neural network on a batch of graphs.
@@ -1104,7 +1113,6 @@ class EvidentialQM7(torch.nn.Module):
 
         # Loop over message passing rounds
         for _ in range(self.num_message_passing_rounds):
-            
             e_len = x.edge_lengths
             e_coulomb = x.edge_coulomb
 
@@ -1112,18 +1120,30 @@ class EvidentialQM7(torch.nn.Module):
             inp = torch.cat((self.state[x.node_from],
                              e_coulomb,
                              ), 1)
-            
             message = self.message_net(inp)
 
             # Aggregate: Sum messages
             self.state.index_add_(0, x.node_to, message)
+
         # Aggretate: Sum node features
         self.graph_state = torch.zeros((x.num_graphs, self.state_dim)).double().to(self.device)
-        self.graph_state.index_add_(0, x.node_graph_index.to(self.device), self.state)
+        self.graph_state.index_add_(0, x.node_graph_index, self.state)
 
         # Get parameters of NIG distribution (4-dimensional output)
-        evidential_params_ = self.output_net(self.graph_state) # (gamma, v, alpha, beta)
+        evidential_params_ = self.output_net(self.graph_state)  # (gamma, v, alpha, beta)
         # Apply activations as specified after Equation 10 in the paper
         gamma, v, alpha, beta = torch.tensor_split(evidential_params_, 4, axis=1)
-        out = torch.concat([gamma, self.softplus(v) + self.eps, self.softplus(alpha).add(1.0).to(torch.float64) + self.eps, self.softplus(beta) + self.eps], axis=1)
+
+        # if trained on scaled and in eval mode
+        if self.scalar is not None and self.training == False:
+            # de-scaling prediction
+            gamma = torch.from_numpy(self.scalar.inverse_transform(gamma.detach()))
+
+        out = torch.concat(
+            [gamma, self.softplus(v) + self.eps, self.softplus(alpha).add(1.0).to(torch.float64) + self.eps,
+             self.softplus(beta) + self.eps], axis=1)
+
         return out
+
+
+

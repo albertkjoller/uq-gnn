@@ -112,35 +112,40 @@ class GAUSSIANNLLLoss:
         self.scalar = None
 
     def __call__(self, theta, y, kappa=0, training=True):
-        self.mu = theta[:,0].reshape(-1,1)
-        self.sigma = theta[:, 1].reshape(-1, 1)
-        self.y = y.reshape(-1,1)
+        mu = theta[:,0].reshape(-1,1)
+        var = theta[:, 1].reshape(-1, 1)
+        y = y.reshape(-1, 1)
 
         # if training on scaled data
         if self.scalar is not None:
             # if in eval, then models outputs descaled data
             if training: # then scale target variable
-                # de-scale y for NLL loss
-                nll_loss = self.loss_func(target=torch.from_numpy(self.scalar.transform(self.y)), input=self.mu, var=self.sigma)
-                # de-scale mu for RMSE
-                rmse_loss = torch.sqrt(torch.mean((torch.from_numpy(self.scalar.inverse_transform(self.mu.detach())) - self.y) ** 2))
+                # de-scale target for NLL loss
+                nll_loss = self.loss_func(target=torch.from_numpy(self.scalar.transform(y)), input=mu, var=var)
+                # de-scale prediction for RMSE
+                rmse_loss = torch.sqrt(torch.mean((torch.from_numpy(self.scalar.inverse_transform(mu.detach())) - y) ** 2))
 
             else: # not training and model output is descaled
                 # rmse is as normal (model output has been converted)
-                rmse_loss = torch.sqrt(torch.mean((self.mu - self.y) ** 2))
+                rmse_loss = torch.sqrt(torch.mean((mu - y) ** 2))
                 # NLL has to be scaled on both terms
-                self.y = torch.from_numpy(self.scalar.transform(self.y))
-                self.mu = torch.from_numpy(self.scalar.transform(self.mu))
-                nll_loss = self.loss_func(target=self.y, input=self.mu, var=self.sigma)
+                y = torch.from_numpy(self.scalar.transform(y))
+                # scaling for NLL loss
+                mu = torch.from_numpy(self.scalar.transform(mu))
+                var = var/self.scalar.var_
+                nll_loss = self.loss_func(target=y, input=mu, var=var)
 
         else:
             # Compute loss like normal
-            nll_loss = self.loss_func(target=self.y, input=self.mu, var=self.sigma)
-            rmse_loss = torch.sqrt(torch.mean((self.mu - self.y)**2))
+            nll_loss = self.loss_func(target=y, input=mu, var=var)
+            rmse_loss = torch.sqrt(torch.mean((mu - y)**2))
 
-        # Update losses
-        #nll_loss = (1 - kappa) * torch.sqrt(nll_loss.mean()) + kappa * rmse_loss
-        #nll_loss = (1 - kappa) * nll_loss.mean() + kappa * rmse_loss
-        return ('GAUSSIANNLL', nll_loss), {'RMSE': rmse_loss}
-        #nll_loss = loss(input=self.mu, target=self.y, var=self.sigma) + 2*torch.sqrt(torch.mean((self.mu - self.y)**2))
-        #return ('GAUSSIANNLL', torch.sqrt(nll_loss.mean())), {'RMSE': torch.sqrt(torch.mean((self.mu - self.y)**2))}
+
+        # kappa automatically decays if defined
+        #   - loss is Gaussian NLL if kappa is not defined
+        loss = (1 - kappa) * nll_loss + kappa * rmse_loss
+
+        return ('Loss', loss), {'GAUSSIANNLL': nll_loss, 'RMSE': rmse_loss}
+
+
+

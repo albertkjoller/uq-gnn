@@ -35,6 +35,9 @@ def evidential_prediction(outputs):
     epi = beta /( v *(alpha -1))
     return pred, alea.flatten().tolist(), epi.flatten().tolist()
 
+def descale_var(var, var_data):
+    descaled_var = var*var_data
+    return descaled_var
 
 def get_performance(df_summary, hue_by, hue_by_list):
 
@@ -44,8 +47,8 @@ def get_performance(df_summary, hue_by, hue_by_list):
     for hue in hue_by_list:
         summary = df_summary[df_summary[hue_by] == hue]
         RMSE = mean_squared_error(summary['target'], summary['prediction'], squared=False)
-        sigma = summary['epistemic'].mean()
-        hue_dict = {'RMSE': RMSE, 'NLL': {}, 'Sigma': sigma }
+        sigma = np.sqrt(summary['epistemic']).mean()
+        hue_dict = {'RMSE': RMSE, 'NLL': {}, 'Sigma': sigma}
         
 
         # If evidential:
@@ -67,7 +70,7 @@ def get_performance(df_summary, hue_by, hue_by_list):
             loss = GaussianNLLLoss()
             nll_loss = loss(input=torch.Tensor(summary['prediction']), target=torch.Tensor(summary['target']), var=torch.Tensor(summary['epistemic']))
             # return ('GAUSSIANNLL', torch.sqrt(nll_loss.mean())), {}
-            hue_dict['NLL'] = torch.sqrt(nll_loss.mean()) # - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
+            hue_dict['NLL'] = float(torch.sqrt(nll_loss.mean())) # - np.mean([scipy.stats.norm.logpdf(summary['target'][i], loc=summary['prediction'][i], scale=summary['epistemic'][i]) for i in range(len(summary))])
 
         #data_type = summary['ID or OOD'].iloc[0]
         performance_dict[f"{hue}"] = hue_dict
@@ -92,19 +95,28 @@ def get_prediction_summary(loaders_dict, model, exp):
             if model.model_type == 'evidential':
                 evidential_params.extend(outputs)
                 pred, alea, epi = evidential_prediction(outputs.detach().numpy())
+                # destandardizing variances
+                if model.scalar != None:
+                    alea = descale_var(alea, )
+                    epi = descale_var(alea, )
                 prediction.extend(pred)
                 aleatoric.extend(alea)
                 epistemic.extend(epi)
-                entropy.extend((0.5 * np.log(2 * np.pi * np.exp(1.) * (np.array(epi) ** 2))).tolist())
+                # entropy of normal distribution
+                entropy.extend((0.5 * np.log(2 * np.pi * (np.array(epi) ** 2))+1/2).tolist())
 
 
             elif model.model_type == 'baseline':
                 # Output matching that of evidential
                 evidential_params.extend(torch.zeros(outputs.shape[0], outputs.shape[1 ] *2))
-                prediction.extend(outputs[: ,0].detach().numpy()) # mu
-                aleatoric.extend(outputs[: ,1].detach().numpy()) # var
-                epistemic.extend(outputs[: ,1].detach().numpy()) # var
-                entropy.extend((0.5 * np.log(2 * np.pi * np.exp(1.) * (outputs[: ,1].detach().numpy() ** 2))).tolist())
+                mu = outputs[: ,0].detach().numpy()
+                prediction.extend(mu) # mu
+                var = outputs[: ,1].detach().numpy() # outputs log_var
+                # the same for both but in truth it outputs the aleatoric
+                aleatoric.extend(var)
+                epistemic.extend(var)
+                # entropy of normal distribution
+                entropy.extend((0.5 * np.log(2 * np.pi * var) + 1/2).tolist())
 
 
             else: # todo: implement for ensemble etc
@@ -147,7 +159,7 @@ def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path, plot_name=
     # general dataframe
     # Proportion of included descending sigma values
     df_cutoff = pd.DataFrame(columns=[hue_by, "Confidence level", "RMSE"])    # from low to high conf
-    df_cutoff_norm = pd.DataFrame(columns=[hue_by, "Confidence level", "RMSE"])
+    df_cutoff_norm = pd.DataFrame(columns=[hue_by, "Confidence level", "normalized RMSE"])
     percentiles = np.arange(100) / 100.
     # if id and ood datasets, then also create one separate for them
     # for exp, summary in summary_dict.items():
@@ -165,7 +177,7 @@ def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path, plot_name=
         mean_error = [np.sqrt(single_df_summary[cutoff:]["Error"].mean()) for cutoff in cutoff_inds]
         df_single_cutoff = pd.DataFrame({hue_by: hue, 'Confidence level': percentiles, 'RMSE': mean_error})
         # normalized
-        df_single_cutoff_norm = pd.DataFrame({hue_by: hue, 'Confidence level': percentiles, 'RMSE': mean_error/max(mean_error)})
+        df_single_cutoff_norm = pd.DataFrame({hue_by: hue, 'Confidence level': percentiles, 'normalized RMSE': mean_error/max(mean_error)})
         df_cutoff = pd.concat([df_cutoff, df_single_cutoff])
         df_cutoff_norm = pd.concat([df_cutoff_norm, df_single_cutoff_norm])
 
@@ -176,14 +188,14 @@ def error_percentile_plot(df_summary, hue_by, hue_by_list, save_path, plot_name=
     #plt.show()
     plt.close()
     # now by normalizing the y axis (divide by max)
-    sns.lineplot(x="Confidence level", y="RMSE", hue=hue_by, data=df_cutoff_norm.reset_index())
+    sns.lineplot(x="Confidence level", y="normalized RMSE", hue=hue_by, data=df_cutoff_norm.reset_index())
     plt.savefig(os.path.join(save_path, f"{plot_name}_norm.png"))
     #plt.show()
     plt.close()
 
 def calibration_plot(df_summary, hue_by, hue_by_list, save_path, plot_name = 'calibration'):
     # general dataframe
-    df_calibration = pd.DataFrame(columns=[hue_by, "Expected Conf.", "Observed Conf."])
+    df_calibration = pd.DataFrame(columns=[hue_by, "Correct proportion", "Confidence level"])
     # from low to high conf
     expected_conf = np.arange(41) / 40.
     for hue in hue_by_list:
@@ -199,17 +211,17 @@ def calibration_plot(df_summary, hue_by, hue_by_list, save_path, plot_name = 'ca
             obs_c = np.multiply(lower_z < single_df_summary["target"], single_df_summary["target"] < higher_z).mean()
             observed_conf.append(obs_c)
 
-        df_single = pd.DataFrame({hue_by: hue, 'Expected Conf.': expected_conf, 'Observed Conf.': observed_conf})
+        df_single = pd.DataFrame({hue_by: hue, 'Confidence level': expected_conf, 'Correct proportion': observed_conf})
         df_calibration = pd.concat([df_calibration, df_single])
 
     # the desired
-    df_truth = pd.DataFrame({hue_by: 'Ideal calibration', 'Expected Conf.': expected_conf, 'Observed Conf.': expected_conf})
+    df_truth = pd.DataFrame({hue_by: 'Ideal calibration', 'Confidence level': expected_conf, 'Correct proportion': expected_conf})
     # df_calibration = df_calibration.append(df_truth)
     df_calibration.reset_index(drop=True, inplace=True)
 
     # made for plotitng multiple models confidence
-    sns.lineplot(x="Expected Conf.", y="Observed Conf.", data=df_truth, label='Ideal calibration', color='black', linestyle='--')
-    sns.lineplot(x="Expected Conf.", y="Observed Conf.", hue=hue_by, data=df_calibration.reset_index())
+    sns.lineplot(x="Confidence level", y="Correct proportion", data=df_truth, label='Ideal calibration', color='black', linestyle='--')
+    sns.lineplot(x="Confidence level", y="Correct proportion", hue=hue_by, data=df_calibration.reset_index())
     plt.savefig(os.path.join(save_path, f"{plot_name}.png"))
     #plt.show()
     plt.close()
@@ -285,7 +297,7 @@ def evaluate_model(loaders_dict, models, experiments, args):
         hue_by = 'Experiment'  # experiment name will differentiate
         hue_by_list = list(set(list(df_summary['Experiment'])))
     # if not, then comparing across different models
-    #   - having the same model with different seeds will create a variance on plots
+    #   - having the same model trained on different seeds will create a variance on plots
     else:
         hue_by = 'Model'  # model type will differentiate
         hue_by_list = list(set(list(df_summary['Model'])))
