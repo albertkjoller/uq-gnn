@@ -7,7 +7,7 @@ class NIGLoss:
     def __init__(self, lambd_) -> None:
         self.lambd_ = lambd_
 
-    def __call__(self, evidential_params_, y, kappa=0):
+    def __call__(self, evidential_params_, y, kappa=0, training=True):
         """
         Forward pass through the NIGLoss function.
 
@@ -30,6 +30,7 @@ class NIGLoss:
                                                      evidential_params_[:, 3].reshape(-1, 1)
 
         # Get losses
+        y = y.reshape(-1, 1)
         nll_loss = self.NIG_NLL(y)
         reg_loss = self.NIG_REGULARIZER(y)
         rmse_loss = torch.sqrt(torch.mean((self.gamma - y) ** 2))
@@ -57,7 +58,6 @@ class NIGLoss:
         Computes regularizing loss on the NIG distribution for a regression target, y. Minimizes evidence on errors by
         scaling the error with the total evidence of the infered posterior.
         Implementation follows Equation 9 in this paper (https://arxiv.org/pdf/1910.02600.pdf)
-
         """
         return abs(y - self.gamma) * (2 * self.nu + self.alpha)
 

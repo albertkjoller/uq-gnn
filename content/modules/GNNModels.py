@@ -230,7 +230,7 @@ class EvidentialGNN3D(torch.nn.Module):
             (default 3)
     """
 
-    def __init__(self, device, state_dim=20, num_message_passing_rounds=3, eps=1e-10):
+    def __init__(self, device, state_dim=20, num_message_passing_rounds=3, eps=1e-5):
         super().__init__()
         self.model_type = 'evidential'
 
@@ -341,7 +341,7 @@ class EvidentialGNN3D(torch.nn.Module):
         evidential_params_ = self.output_net(self.graph_state) # (gamma, v, alpha, beta)
         # Apply activations as specified after Equation 10 in the paper
         gamma, v, alpha, beta = torch.tensor_split(evidential_params_, 4, axis=1)
-        out = torch.concat([gamma, self.softplus(v) + self.eps, self.softplus(alpha).add(1.0).to(torch.float64) + self.eps, self.softplus(beta) + self.eps], axis=1)
+        out = torch.concat([gamma, self.softplus(v) + self.eps, self.softplus(alpha).add(1.0).to(torch.float64)+self.eps, self.softplus(beta) + self.eps], axis=1)
         return out
 
 class BaselineToyModel1D(torch.nn.Module):
