@@ -5,17 +5,10 @@
 This project examines uncertainty quantification in graph neural networks by approaching the concept of 
 *Evidential Learning*. The main components of this repository are:
 
-- [Notebook containing descriptions for reproducibility of the associated project report.](https://nbviewer.org/github/albertkjoller/uq-gnn/blob/main/explainer_notebook.ipynb)
 - Code structure for experimenting with training models (see *Training models* section below)
+- [Notebook containing descriptions for reproducibility of the associated project report.](https://nbviewer.org/github/albertkjoller/uq-gnn/blob/main/explainer_notebook.ipynb)
 
 For in-depth considerations and conclusions of results consult the associated paper.
-
-#### Example - Evidential Learning
-
-Epistemic              |  Aleatoric              |  Parameters
-:-------------------------:|:-------------------------:|:-------------------------:|
-![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif)  |  ![aleatoric_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/aleatoric.gif)  |  ![parameters_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/parameters.gif)
-
 
 ### Setup 
 
@@ -84,6 +77,14 @@ python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 64
 	      --val_every_step 25 --tensorboard_logdir logs --experiment_name BASELINE_QM7 \
               --save_path models --seed 0 --device cuda
 ```
+
+
+#### Example of training a 1D model - Evidential Learning
+
+Epistemic              |  Aleatoric              |  Parameters
+:-------------------------:|:-------------------------:|:-------------------------:|
+![epistemic_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/epistemic.gif)  |  ![aleatoric_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/aleatoric.gif)  |  ![parameters_uq](https://github.com/albertkjoller/uq-gnn/blob/main/figures/parameters.gif)
+
 
 
 ### Evaluating models
