@@ -69,8 +69,9 @@ python run.py --mode train --data_dir content/data --dataset TOY1D --batch_size 
 
 ```
 python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 64 \
-              --model EvidentialQM7_3D --epochs 200 --lr 5e-3 --loss_function NIG --NIG_lambda 0.75 --kappa 1.0 --kappa_decay 0.99 \
-              --scalar 'none' --val_every_step 25 --tensorboard_logdir logs --experiment_name EVIDENTIAL_QM7 \
+              --model EvidentialQM7_3D --epochs 200 --lr 5e-3 --loss_function NIG \
+	        --NIG_lambda 0.75 --kappa 1.0 --kappa_decay 0.99 --scalar 'none' \ 
+		  --val_every_step 25 --tensorboard_logdir logs --experiment_name EVIDENTIAL_QM7 \
               --seed 0 --device cuda
 ```
 
@@ -78,33 +79,61 @@ python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 64
 
 ```
 python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 64 \
-              --model testbase --epochs 200 --lr 5e-3 --loss_function GAUSSIANNLL --kappa 0.0 --kappa_decay 1.0 \
-              --scalar 'standardize' --val_every_step 25 --tensorboard_logdir logs --experiment_name BASELINE_QM7 \
+              --model testbase --epochs 200 --lr 5e-3 --loss_function GAUSSIANNLL \
+	      --kappa 0.0 --kappa_decay 1.0 --scalar 'standardize' \
+	      --val_every_step 25 --tensorboard_logdir logs --experiment_name BASELINE_QM7 \
               --save_path models --seed 0 --device cuda
 ```
 
 
 ### Evaluating models
 
+When running in evaluation mode, the resulting figures will be saved in a folder called `eval_{experiment_name}`. 
+Please look here after running the commands.
+
+#### Toy Dataset - 1D (example)
+
+We can run the trained 1D model (with name REPRODUCTION_TOY) in evaluation mode for obtaining plots and tabular results
+by running the following command:
+
+```
+python run.py --mode evaluation --data_dir content/data --batch_size 64 --save_path models \
+	        --NIG_lambda 0.01 --scalar 'none' --seed 0 --device cpu \
+	        --experiment_name REPRODUCTION_TOY --model TOY1D --dataset TOY1D --id_ood ID	      
+```
+
+If we want to compare performance on ID with OOD test set the command would be the following:
+```
+python run.py --mode evaluation --data_dir content/data --batch_size 64 --save_path models \
+	        --NIG_lambda 0.01 --seed 0 --device cpu \
+	        --experiment_name REPRODUCTION_TOY --model TOY1D --dataset TOY1D --id_ood ID --scalar 'none'  \
+	        --experiment_name REPRODUCTION_TOY --model TOY1D --dataset TOY1D-OOD --id_ood OOD --scalar 'none' 
+```
+
+
+#### General evaluation commands:
+
 It is possible to evaluate models across e.g. seed to see variance of performance, type of models to compare them, and also different data types like ID or OOD to evaluate the epistemic uncertainty. The general running command line is:
 
 ```
 python run.py --mode evaluation --data_dir content/data --batch_size 64 --save_path models --seed 0 --device cpu
 ```
-And considering the 1D toy example, you can evaluatte an experiment by appending the following to the command above:
+You can evaluate an experiment by appending the following to the command above along with the relevant input arguments related to the experiment:
+(*OBS: Remember to change the argument values!*)
 
 ```
---experiment_name 1D_model_1 --model TOY1D --dataset TOY1D --id_ood ID
+--experiment_name model_1 --model modelType --dataset dataset_1 --id_ood ?
 ```
+
 And in order to add another experiment or dataset in the evaluation, simply replicate the line above and adjust the necessary parameters. Below is an example of appending the same model but trained on a different seed,
-
-As an example, to add another TOY1D model which has trained on a different seed, add the following (*Note: experiment_name has changed*):
+(*OBS: Experiment_name has changed*):
 
 ```
---experiment_name 1D_model_2 --model TOY1D --dataset TOY1D --id_ood ID
+--experiment_name model_2 --model modelType --dataset dataset_2 --id_ood ?
 ```
 
-### A run-down of all arguments:
+
+### Overview of input arguments
 
 - `--mode [train, evaluation]`, defines whether to run in train or evaluation mode.
 
