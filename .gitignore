@@ -1,14 +1,14 @@
 # Python
 __pycache__/
 
+# Tensorboard
+logs/
+
 # Mac
 .DS_Store
 
 # Jupyter Notebook
 .ipynb_checkpoints
-
-# tensorboard logs
-logs/
 
 .idea
 .vscode

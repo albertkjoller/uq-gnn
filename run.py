@@ -1,9 +1,10 @@
 
 import os
-import torch
 import numpy as np
 import argparse
 from copy import deepcopy
+
+import torch
 
 from content.train import train
 from content.evaluate import evaluate_model
