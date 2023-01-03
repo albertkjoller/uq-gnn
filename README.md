@@ -63,9 +63,9 @@ python run.py --mode train --data_dir content/data --dataset TOY1D --batch_size 
 ```
 python run.py --mode train --data_dir content/data --dataset QM7 --batch_size 64 \
               --model EvidentialQM7_3D --epochs 200 --lr 5e-3 --loss_function NIG \
-	        --NIG_lambda 0.75 --kappa 1.0 --kappa_decay 0.99 --scalar 'none' \ 
-		  --val_every_step 25 --tensorboard_logdir logs --experiment_name EVIDENTIAL_QM7 \
-              --seed 0 --device cuda
+	      --NIG_lambda 0.75 --kappa 1.0 --kappa_decay 0.99 --scalar 'none' \
+	      --val_every_step 25 --tensorboard_logdir logs --experiment_name EVIDENTIAL_QM7 \
+	      --seed 0 --device cuda
 ```
 
 #### Gaussian MLE (baseline)
